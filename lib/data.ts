@@ -1,5 +1,5 @@
 // lib/data.ts
-import { query } from './db';
+import { query } from '../db';
 import type { BlogPost, Comment, Product, Game } from '../types';
 
 /* ========== 📰 BLOG POSTS ========== */
