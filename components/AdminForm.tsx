@@ -36,7 +36,7 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
       // Default values for new items
       const defaults = {
         games: { title: '', imageUrl: '', category: '', tags: [], description: '', downloadUrl: '#', gallery: [] },
-        blogs: { title: '', summary: '', imageUrl: '', author: '', content: '', category: '' },
+        blogs: { title: '', summary: '', imageUrl: '', author: '', rating: 4.5, content: '', category: '' },
         products: { name: '', imageUrl: '', price: '', url: '#', description: '', category: '', gallery: [] }
       };
       setFormData(defaults[type]);
@@ -45,8 +45,13 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
   }, [item, type]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    // @ts-ignore
+    const isNumber = e.target.type === 'number';
+    setFormData((prev: any) => ({ 
+      ...prev, 
+      [name]: isNumber ? parseFloat(value) : value 
+    }));
   };
   
   const handleTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,6 +185,21 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
       {renderField('imageUrl', 'URL de l\'image')}
       {renderField('author', 'Auteur')}
       {renderField('category', 'Catégorie')}
+       <div>
+        <label htmlFor="rating" className="block text-sm font-medium text-gray-300 mb-1">Note (sur 5)</label>
+        <input
+            id="rating"
+            name="rating"
+            type="number"
+            value={formData.rating || ''}
+            onChange={handleChange}
+            step="0.1"
+            min="0"
+            max="5"
+            required
+            className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
       {renderField('content', 'Contenu', 'textarea')}
       {renderField('affiliateUrl', 'URL d\'affiliation', 'url', false)}
       {renderField('publishDate', 'Date de publication', 'date', false)}
