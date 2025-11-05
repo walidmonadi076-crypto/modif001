@@ -24,28 +24,6 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
   `);
   return result.rows;
 }
-export async function getBlogPostById(id: number): Promise<BlogPost | null> {
-  const result = await query(`
-    SELECT 
-      id,
-      title,
-      summary,
-      image_url AS "imageUrl",
-      video_url AS "videoUrl",
-      author,
-      publish_date AS "publishDate",
-      rating,
-      affiliate_url AS "affiliateUrl",
-      content,
-      category
-    FROM blog_posts
-    WHERE id = $1
-  `, [id]);
-
-  return result.rows.length > 0 ? result.rows[0] : null;
-}
-
-
 // جلب مقال واحد عبر الـ ID
 export async function getBlogPostById(id: number): Promise<BlogPost | null> {
   const result = await query(`
