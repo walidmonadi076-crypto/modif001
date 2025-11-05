@@ -15,7 +15,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
       video_url AS "videoUrl",
       author,
       publish_date AS "publishDate",
-      rating,
+      rating::float,
       affiliate_url AS "affiliateUrl",
       content,
       category
@@ -36,7 +36,7 @@ export async function getBlogPostById(id: number): Promise<BlogPost | null> {
       video_url AS "videoUrl",
       author,
       publish_date AS "publishDate",
-      rating,
+      rating::float,
       affiliate_url AS "affiliateUrl",
       content,
       category

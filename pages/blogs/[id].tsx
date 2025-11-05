@@ -9,15 +9,16 @@ import { getBlogPostById, getAllBlogPosts, getCommentsByBlogId } from '../../lib
 import type { BlogPost, Comment } from '../../types';
 
 const StarRating: React.FC<{ rating: number; className?: string }> = ({ rating, className = '' }) => {
-    const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 !== 0;
+    const numericRating = Number(rating || 0);
+    const fullStars = Math.floor(numericRating);
+    const halfStar = numericRating % 1 !== 0;
     const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
     return (
         <div className={`flex items-center text-yellow-400 ${className}`}>
             {[...Array(fullStars)].map((_, i) => <svg key={`full-${i}`} className="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>)}
             {halfStar && <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545zM10 12.83V2.5l1.837 3.718 4.108.597-2.973 2.898.702 4.09L10 12.83z"/></svg>}
             {[...Array(emptyStars)].map((_, i) => <svg key={`empty-${i}`} className="w-5 h-5 fill-current text-gray-600" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>)}
-            <span className="ml-2 text-lg text-gray-300">{rating.toFixed(1)} / 5.0</span>
+            <span className="ml-2 text-lg text-gray-300">{numericRating.toFixed(1)} / 5.0</span>
         </div>
     );
 };

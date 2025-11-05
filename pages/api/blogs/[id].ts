@@ -11,7 +11,7 @@ export default async function handler(
 
   try {
     const result = await client.query(
-      'SELECT id, title, summary, image_url as "imageUrl", video_url as "videoUrl", author, publish_date as "publishDate", rating, affiliate_url as "affiliateUrl", content, category FROM blog_posts WHERE id = $1',
+      'SELECT id, title, summary, image_url as "imageUrl", video_url as "videoUrl", author, publish_date as "publishDate", rating::float, affiliate_url as "affiliateUrl", content, category FROM blog_posts WHERE id = $1',
       [id]
     );
 
