@@ -52,3 +52,8 @@ export interface SocialLink {
   url: string;
   icon_svg: string; // Storing the full SVG code as text
 }
+
+export interface Ad {
+  placement: string;
+  code: string;
+}

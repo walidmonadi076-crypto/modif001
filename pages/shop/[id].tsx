@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -7,6 +6,7 @@ import Image from 'next/image';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { getProductById, getAllProducts } from '../../lib/data';
 import type { Product } from '../../types';
+import Ad from '../../components/Ad';
 
 interface ProductDetailPageProps {
     product: Product;
@@ -21,12 +21,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
             setMainImage(product.gallery[0] || product.imageUrl);
         }
     }, [product]);
-
-    const AdPlaceholder: React.FC<{ className?: string, text: string }> = ({ className, text }) => (
-      <div className={`bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center ${className}`}>
-        <span className="text-gray-500 text-sm font-semibold">{text}</span>
-      </div>
-    );
 
     if (router.isFallback) {
         return (
@@ -70,7 +64,9 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
                          <a href={product.url} target="_blank" rel="noopener noreferrer" className="mt-auto w-full text-center bg-green-500 text-white font-bold py-4 px-8 rounded-lg text-lg hover:bg-green-600 transition-colors duration-300 transform hover:scale-105">
                             Buy Now
                         </a>
-                        <AdPlaceholder className="w-full h-48 mt-8" text="Square Ad (300x250)" />
+                        <div className="mt-8 flex justify-center">
+                            <Ad placement="shop_square" />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -16,14 +16,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     const { id, name, url, icon_svg } = req.body;
+    let processedUrl = url;
 
     if (req.method === 'POST' || req.method === 'PUT') {
         if (!name || typeof name !== 'string' || name.trim() === '') {
             return res.status(400).json({ error: 'Le champ "Nom" est obligatoire.' });
         }
-        if (!url || typeof url !== 'string' || !url.startsWith('http')) {
+        if (!url || typeof url !== 'string' || url.trim() === '') {
             return res.status(400).json({ error: 'Une URL valide est obligatoire.' });
         }
+        
+        // Ajoute automatiquement https:// si le protocole est manquant
+        if (!/^https?:\/\//i.test(url)) {
+            processedUrl = `https://${url}`;
+        }
+        
+        // Valide le format final de l'URL
+        try {
+            new URL(processedUrl);
+        } catch (_) {
+            return res.status(400).json({ error: 'Le format de l\'URL est invalide.' });
+        }
+
         if (!icon_svg || typeof icon_svg !== 'string' || !icon_svg.includes('<svg')) {
             return res.status(400).json({ error: 'Un code SVG valide est obligatoire.' });
         }
@@ -32,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'POST') {
       const result = await client.query(
         'INSERT INTO social_links (name, url, icon_svg) VALUES ($1, $2, $3) RETURNING *',
-        [name, url, icon_svg]
+        [name, processedUrl, icon_svg]
       );
       return res.status(201).json(result.rows[0]);
     }
@@ -40,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'PUT') {
       const result = await client.query(
         'UPDATE social_links SET name = $1, url = $2, icon_svg = $3 WHERE id = $4 RETURNING *',
-        [name, url, icon_svg, id]
+        [name, processedUrl, icon_svg, id]
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ message: 'Lien non trouvé' });

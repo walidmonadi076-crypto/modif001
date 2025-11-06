@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -7,6 +6,7 @@ import Image from 'next/image';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { getGameById, getAllGames } from '../../lib/data';
 import type { Game } from '../../types';
+import Ad from '../../components/Ad';
 
 declare global {
     interface Window {
@@ -52,12 +52,6 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
         }
     };
 
-    const AdPlaceholder: React.FC<{ className?: string, text: string }> = ({ className, text }) => (
-      <div className={`bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center ${className}`}>
-        <span className="text-gray-500 text-sm font-semibold">{text}</span>
-      </div>
-    );
-
     if (router.isFallback) {
         return (
              <div className="text-center p-10">
@@ -90,7 +84,9 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
                                 <button onClick={handleDownloadClick} className="mt-8 inline-block w-full sm:w-auto text-center bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-green-600 transition-colors duration-300 transform hover:scale-105">Download Now</button>
                             </div>
                         </div>
-                        <AdPlaceholder className="h-24 mt-8" text="Horizontal Ad (728x90)" />
+                        <div className="mt-8 flex justify-center">
+                          <Ad placement="game_horizontal" />
+                        </div>
                     </div>
                     <div className="space-y-8">
                         <h3 className="text-xl font-bold text-white border-b border-gray-700 pb-2">Screenshots</h3>
@@ -99,7 +95,7 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
                                 <Image src={img} alt={`${game.title} screenshot ${index + 1}`} fill sizes="50vw" className="object-cover" />
                             </div>
                         ))}</div>
-                        <AdPlaceholder className="w-full h-96" text="Vertical Ad (300x600)" />
+                        <Ad placement="game_vertical" />
                     </div>
                 </div>
             </div>

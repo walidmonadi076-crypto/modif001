@@ -80,61 +80,45 @@ const Home: React.FC<HomeProps> = ({ searchQuery, searchActive, games }) => {
   }, [searchQuery, selectedCategory, selectedTag, games, featuredTags]);
   
   const sections = useMemo(() => {
-    const allTags = [...new Set(games.flatMap(g => g.tags || []))];
-    const featuredTagsList = ['Hot', 'Updated', 'Top'];
-
-    // Définir l'ordre et la configuration des sections
-    const sectionConfigs: {
-      key: string;
-      title: string;
-      getGames: (allGames: Game[]) => Game[];
-      carouselProps: { cardVariant: 'default' | 'vertical' | 'featured' };
-      viewMoreTag: string;
-    }[] = [
-      {
-        key: 'play-on-comet',
-        title: 'Play on Comet',
-        getGames: (allGames) => allGames.filter(g => g.tags?.includes('Play on Comet')),
-        carouselProps: { cardVariant: 'default' },
-        viewMoreTag: 'Play on Comet',
-      },
-      {
-        key: 'featured',
-        title: 'Featured Games',
-        getGames: (allGames) => allGames.filter(g => g.tags?.some(tag => featuredTagsList.includes(tag))),
-        carouselProps: { cardVariant: 'default' },
-        viewMoreTag: '__FEATURED__',
-      },
-      {
-        key: 'new',
-        title: 'New Games',
-        getGames: (allGames) => allGames.filter(g => g.tags?.includes('New')),
-        carouselProps: { cardVariant: 'default' },
-        viewMoreTag: 'New',
-      }
+    // 1. Définir l'ordre de priorité des tags.
+    const priorityOrder = [
+      'Play on Comet',
+      'New',
+      'Hot',
+      'Updated',
+      'Top',
+      'Featured' 
     ];
 
-    const handledTags = ['Play on Comet', 'New', ...featuredTagsList];
+    // 2. Récupérer tous les tags uniques à partir des données des jeux.
+    const allTags = [...new Set(games.flatMap(game => game.tags || []))];
 
+    // 3. Séparer les tags prioritaires des autres.
+    const priorityTags = priorityOrder.filter(tag => allTags.includes(tag));
     const otherTags = allTags
-      .filter(tag => !handledTags.includes(tag))
-      .sort();
+      .filter(tag => !priorityOrder.includes(tag))
+      .sort(); // Trier le reste par ordre alphabétique.
 
-    otherTags.forEach(tag => {
-      sectionConfigs.push({
-        key: tag.toLowerCase().replace(/\s+/g, '-'),
-        title: `${tag} Games`,
-        getGames: (allGames) => allGames.filter(g => g.tags?.includes(tag)),
-        carouselProps: { cardVariant: 'default' },
-        viewMoreTag: tag,
-      });
-    });
+    // 4. Les combiner pour obtenir la liste finale et ordonnée des tags pour les sections.
+    const orderedTags = [...priorityTags, ...otherTags];
 
-    return sectionConfigs
-      .map(config => ({
-        ...config,
-        games: config.getGames(games),
-      }))
+    // 5. Créer une configuration de section pour chaque tag.
+    return orderedTags
+      .map(tag => {
+        const sectionGames = games.filter(g => g.tags?.includes(tag));
+        
+        // Utiliser un titre plus descriptif, avec un cas spécial pour 'Play on Comet'.
+        const title = tag === 'Play on Comet' ? 'Play on Comet' : `${tag} Games`;
+        
+        return {
+          key: tag.toLowerCase().replace(/\s+/g, '-'),
+          title: title,
+          games: sectionGames,
+          carouselProps: { cardVariant: 'default' as const },
+          viewMoreTag: tag,
+        };
+      })
+      // 6. Filtrer les sections qui pourraient se retrouver sans jeux.
       .filter(section => section.games.length > 0);
   }, [games]);
 

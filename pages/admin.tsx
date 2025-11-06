@@ -1,9 +1,7 @@
-
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
-import type { Game, BlogPost, Product, SocialLink } from '../types';
+import type { Game, BlogPost, Product, SocialLink, Ad } from '../types';
 import AdminDashboard from '../components/AdminDashboard';
 import { paginate } from '../lib/pagination';
 import AdminForm from '../components/AdminForm';
@@ -23,17 +21,21 @@ function getCookie(name: string): string | null {
   return null;
 }
 
+const AD_PLACEMENTS = ['game_vertical', 'game_horizontal', 'shop_square'];
+
 export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<'games' | 'blogs' | 'products' | 'social-links'>('games');
+  const [activeTab, setActiveTab] = useState<'games' | 'blogs' | 'products' | 'social-links' | 'ads'>('games');
   const [games, setGames] = useState<Game[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [ads, setAds] = useState<Record<string, string>>({});
+  
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
@@ -56,7 +58,8 @@ export default function AdminPanel() {
     activeTab === 'games' ? games :
     activeTab === 'blogs' ? blogs :
     activeTab === 'products' ? products :
-    socialLinks, [activeTab, games, blogs, products, socialLinks]);
+    activeTab === 'social-links' ? socialLinks :
+    [], [activeTab, games, blogs, products, socialLinks]);
 
   const filteredData = useMemo(() => currentData.filter((item: any) => {
     const query = searchQuery.toLowerCase();
@@ -80,28 +83,37 @@ export default function AdminPanel() {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [gamesRes, blogsRes, productsRes, socialLinksRes] = await Promise.all([
+      const [gamesRes, blogsRes, productsRes, socialLinksRes, adsRes] = await Promise.all([
         fetch('/api/games'),
         fetch('/api/blogs'),
         fetch('/api/products'),
         fetch('/api/admin/social-links'),
+        fetch('/api/admin/ads'),
       ]);
       
-      if (!gamesRes.ok || !blogsRes.ok || !productsRes.ok || !socialLinksRes.ok) {
+      if (!gamesRes.ok || !blogsRes.ok || !productsRes.ok || !socialLinksRes.ok || !adsRes.ok) {
         throw new Error('Failed to fetch initial data');
       }
 
-      const [gamesData, blogsData, productsData, socialLinksData] = await Promise.all([
+      const [gamesData, blogsData, productsData, socialLinksData, adsData] = await Promise.all([
         gamesRes.json(),
         blogsRes.json(),
         productsRes.json(),
         socialLinksRes.json(),
+        adsRes.json(),
       ]);
 
       setGames(gamesData);
       setBlogs(blogsData);
       setProducts(productsData);
       setSocialLinks(socialLinksData);
+      
+      const adsObject = adsData.reduce((acc: Record<string, string>, ad: Ad) => {
+        acc[ad.placement] = ad.code || '';
+        return acc;
+      }, {});
+      setAds(adsObject);
+
     } catch (error) {
       console.error('Error fetching all data:', error);
       addToast('Erreur lors du chargement des données.', 'error');
@@ -138,7 +150,6 @@ export default function AdminPanel() {
 
   // Déconnexion automatique pour inactivité
   useEffect(() => {
-    // Fix: Using ReturnType<typeof setTimeout> to avoid dependency on Node.js types in the browser.
     let logoutTimer: ReturnType<typeof setTimeout>;
 
     const resetTimer = () => {
@@ -243,7 +254,6 @@ export default function AdminPanel() {
         setShowForm(false);
         setEditingItem(null);
         
-        // Mise à jour optimiste de l'UI
         if (activeTab === 'games') {
           setGames(prev => editingItem ? prev.map(g => g.id === savedItem.id ? savedItem : g) : [savedItem, ...prev]);
         } else if (activeTab === 'blogs') {
@@ -261,6 +271,34 @@ export default function AdminPanel() {
     } catch (error) {
       console.error('Error saving:', error);
       addToast('Erreur lors de la sauvegarde', 'error');
+    }
+  };
+  
+  const handleSaveAds = async () => {
+    const csrfToken = getCookie('csrf_token');
+    if (!csrfToken) {
+        addToast('Erreur de session. Veuillez vous reconnecter.', 'error');
+        return;
+    }
+    
+    try {
+      const res = await fetch('/api/admin/ads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify(ads)
+      });
+      
+      if(res.ok) {
+        addToast('Publicités sauvegardées avec succès!', 'success');
+      } else {
+        const error = await res.json();
+        addToast(`Erreur: ${error.error || 'La sauvegarde a échoué'}`, 'error');
+      }
+    } catch (error) {
+      addToast('Erreur lors de la sauvegarde des publicités.', 'error');
     }
   };
 
@@ -319,6 +357,31 @@ export default function AdminPanel() {
     );
   }
   
+  const renderAdsTab = () => (
+    <div className="bg-gray-800 rounded-lg p-6 space-y-6">
+      {AD_PLACEMENTS.map(placement => (
+        <div key={placement}>
+          <label htmlFor={`ad-${placement}`} className="block text-lg font-semibold text-gray-200 mb-2 capitalize">
+            {placement.replace('_', ' ')}
+          </label>
+          <textarea
+            id={`ad-${placement}`}
+            value={ads[placement] || ''}
+            onChange={(e) => setAds(prev => ({...prev, [placement]: e.target.value}))}
+            rows={6}
+            className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+            placeholder={`Collez ici le code <script> pour l'emplacement ${placement}`}
+          />
+        </div>
+      ))}
+      <div className="flex justify-end">
+        <button onClick={handleSaveAds} className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded font-semibold">
+          Sauvegarder les publicités
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <Head>
@@ -330,7 +393,7 @@ export default function AdminPanel() {
       {showForm && (
         <AdminForm 
             item={editingItem}
-            type={activeTab}
+            type={activeTab as any}
             onClose={() => { setShowForm(false); setEditingItem(null); }}
             onSubmit={handleSubmit}
         />
@@ -351,8 +414,8 @@ export default function AdminPanel() {
 
         <AdminDashboard games={games} blogs={blogs} products={products} />
 
-        <div className="flex gap-4 mb-6">
-          {['games', 'blogs', 'products', 'social-links'].map((tab) => (
+        <div className="flex gap-4 mb-6 flex-wrap">
+          {['games', 'blogs', 'products', 'social-links', 'ads'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -360,95 +423,104 @@ export default function AdminPanel() {
                 activeTab === tab ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
               }`}
             >
-              {tab === 'games' ? `Jeux (${games.length})` :
-               tab === 'blogs' ? `Blogs (${blogs.length})` :
-               tab === 'products' ? `Produits (${products.length})` :
-               `Réseaux (${socialLinks.length})`}
+              {
+                {
+                  'games': `Jeux (${games.length})`,
+                  'blogs': `Blogs (${blogs.length})`,
+                  'products': `Produits (${products.length})`,
+                  'social-links': `Réseaux (${socialLinks.length})`,
+                  'ads': 'Publicités'
+                }[tab]
+              }
             </button>
           ))}
         </div>
+        
+        {activeTab === 'ads' ? renderAdsTab() : (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <input
+                type="text"
+                placeholder={`Rechercher dans ${activeTab}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="px-4 py-2 bg-gray-700 rounded w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-purple-600"
+              />
+              <button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-semibold capitalize">
+                Ajouter {activeTab.slice(0, -1)}
+              </button>
+            </div>
 
-        <div className="flex justify-between items-center mb-4">
-          <input
-            type="text"
-            placeholder={`Rechercher dans ${activeTab}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-4 py-2 bg-gray-700 rounded w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-purple-600"
-          />
-          <button onClick={handleAddNew} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-semibold capitalize">
-            Ajouter {activeTab.slice(0, -1)}
-          </button>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-6">
-          {loading ? (
-            <div className="text-center py-10">Chargement...</div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left p-3">ID</th>
-                      <th className="text-left p-3">{activeTab === 'products' || activeTab === 'social-links' ? 'Nom' : 'Titre'}</th>
-                      <th className="text-left p-3">{activeTab === 'social-links' ? 'URL' : 'Catégorie'}</th>
-                      <th className="text-left p-3">{activeTab === 'social-links' ? 'Icône' : 'Image'}</th>
-                      <th className="text-right p-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginationData.items.map((item: any) => (
-                      <tr key={item.id} className="border-b border-gray-700 hover:bg-gray-750">
-                        <td className="p-3">{item.id}</td>
-                        <td className="p-3">{item.title || item.name}</td>
-                        <td className="p-3">{activeTab === 'social-links' ? item.url : item.category}</td>
-                        <td className="p-3">
-                          {activeTab === 'social-links' ? (
-                            <span className="w-8 h-8 flex items-center justify-center bg-gray-700 rounded text-white" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
-                          ) : (
-                            <Image
-                              src={item.imageUrl}
-                              alt={item.title || item.name}
-                              width={64}
-                              height={64}
-                              className="object-cover rounded"
-                            />
-                          )}
-                        </td>
-                        <td className="p-3 text-right">
-                          <button onClick={() => handleEdit(item)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded mr-2">Modifier</button>
-                          <button onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded">Supprimer</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {paginationData.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 mt-6">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={!paginationData.hasPreviousPage}
-                    className="px-4 py-2 bg-gray-700 rounded disabled:opacity-50 hover:bg-gray-600"
-                  >
-                    Précédent
-                  </button>
-                  <span className="text-gray-300">
-                    Page {currentPage} sur {paginationData.totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(paginationData.totalPages, prev + 1))}
-                    disabled={!paginationData.hasNextPage}
-                    className="px-4 py-2 bg-gray-700 rounded disabled:opacity-50 hover:bg-gray-600"
-                  >
-                    Suivant
-                  </button>
-                </div>
+            <div className="bg-gray-800 rounded-lg p-6">
+              {loading ? (
+                <div className="text-center py-10">Chargement...</div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-700">
+                          <th className="text-left p-3">ID</th>
+                          <th className="text-left p-3">{activeTab === 'products' || activeTab === 'social-links' ? 'Nom' : 'Titre'}</th>
+                          <th className="text-left p-3">{activeTab === 'social-links' ? 'URL' : 'Catégorie'}</th>
+                          <th className="text-left p-3">{activeTab === 'social-links' ? 'Icône' : 'Image'}</th>
+                          <th className="text-right p-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginationData.items.map((item: any) => (
+                          <tr key={item.id} className="border-b border-gray-700 hover:bg-gray-750">
+                            <td className="p-3">{item.id}</td>
+                            <td className="p-3">{item.title || item.name}</td>
+                            <td className="p-3">{activeTab === 'social-links' ? item.url : item.category}</td>
+                            <td className="p-3">
+                              {activeTab === 'social-links' ? (
+                                <span className="w-8 h-8 flex items-center justify-center bg-gray-700 rounded text-white" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                              ) : (
+                                <Image
+                                  src={item.imageUrl}
+                                  alt={item.title || item.name}
+                                  width={64}
+                                  height={64}
+                                  className="object-cover rounded"
+                                />
+                              )}
+                            </td>
+                            <td className="p-3 text-right">
+                              <button onClick={() => handleEdit(item)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded mr-2">Modifier</button>
+                              <button onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded">Supprimer</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {paginationData.totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-4 mt-6">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={!paginationData.hasPreviousPage}
+                        className="px-4 py-2 bg-gray-700 rounded disabled:opacity-50 hover:bg-gray-600"
+                      >
+                        Précédent
+                      </button>
+                      <span className="text-gray-300">
+                        Page {currentPage} sur {paginationData.totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(paginationData.totalPages, prev + 1))}
+                        disabled={!paginationData.hasNextPage}
+                        className="px-4 py-2 bg-gray-700 rounded disabled:opacity-50 hover:bg-gray-600"
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
