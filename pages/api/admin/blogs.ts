@@ -12,7 +12,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { id, title, summary, imageUrl, videoUrl, author, publishDate, rating, affiliateUrl, content, category } = req.body;
     
-    // Data sanitization and validation
+    // Validation stricte des données pour POST et PUT
+    if (req.method === 'POST' || req.method === 'PUT') {
+        if (!title || typeof title !== 'string' || title.trim() === '') {
+            return res.status(400).json({ error: 'Le champ "Titre" est obligatoire.' });
+        }
+        if (!summary || typeof summary !== 'string' || summary.trim() === '') {
+            return res.status(400).json({ error: 'Le champ "Résumé" est obligatoire.' });
+        }
+        if (!imageUrl || typeof imageUrl !== 'string' || imageUrl.trim() === '') {
+            return res.status(400).json({ error: 'Le champ "URL de l\'image" est obligatoire.' });
+        }
+        if (!author || typeof author !== 'string' || author.trim() === '') {
+            return res.status(400).json({ error: 'Le champ "Auteur" est obligatoire.' });
+        }
+        if (!content || typeof content !== 'string' || content.trim() === '') {
+            return res.status(400).json({ error: 'Le champ "Contenu" est obligatoire.' });
+        }
+        if (!category || typeof category !== 'string' || category.trim() === '') {
+            return res.status(400).json({ error: 'Le champ "Catégorie" est obligatoire.' });
+        }
+    }
+    
+    // Nettoyage et préparation des données
     const numericRating = parseFloat(rating) || 0;
     const safeVideoUrl = videoUrl || null;
     const safeAffiliateUrl = affiliateUrl || null;
@@ -53,11 +75,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(200).json({ message: 'Blog post deleted successfully' });
       }
     } else {
+      res.setHeader('Allow', ['POST', 'PUT', 'DELETE']);
       res.status(405).json({ message: 'Method not allowed' });
     }
   } catch (error) {
     console.error("API Error in /api/admin/blogs:", error);
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ error: 'Erreur interne du serveur.', details: (error as Error).message });
   } finally {
      client.release();
   }

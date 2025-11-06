@@ -157,7 +157,7 @@ export default function AdminPanel() {
         fetchData();
       } else {
         const error = await res.json();
-        alert(`Erreur: ${error.message || 'Non autorisé'}`);
+        alert(`Erreur: ${error.error || error.message || 'La suppression a échoué'}`);
       }
     } catch (error) {
       console.error('Error deleting:', error);
@@ -190,7 +190,7 @@ export default function AdminPanel() {
         fetchData();
       } else {
         const error = await res.json();
-        alert(`Erreur: ${error.message || 'Non autorisé'}`);
+        alert(`Erreur: ${error.error || error.message || 'La sauvegarde a échoué'}`);
       }
     } catch (error) {
       console.error('Error saving:', error);
