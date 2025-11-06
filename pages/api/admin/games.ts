@@ -10,24 +10,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const client = await getDbClient();
 
   try {
+    const { id, title, imageUrl, category, tags, theme, description, videoUrl, downloadUrl, gallery } = req.body;
+    
+    // Data sanitization and validation
+    const safeTags = Array.isArray(tags) ? tags : [];
+    const safeGallery = Array.isArray(gallery) ? gallery : [];
+    const safeTheme = theme || null;
+    const safeVideoUrl = videoUrl || null;
+    const safeDownloadUrl = downloadUrl || '#';
+
+
     if (req.method === 'POST') {
-      const { title, imageUrl, category, tags, theme, description, videoUrl, downloadUrl, gallery } = req.body;
-      
       const result = await client.query(
         `INSERT INTO games (title, image_url, category, tags, theme, description, video_url, download_url, gallery) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-        [title, imageUrl, category, tags || [], theme || null, description, videoUrl || null, downloadUrl, gallery || []]
+        [title, imageUrl, category, safeTags, safeTheme, description, safeVideoUrl, safeDownloadUrl, safeGallery]
       );
       
       res.status(201).json(result.rows[0]);
+
     } else if (req.method === 'PUT') {
-      const { id, title, imageUrl, category, tags, theme, description, videoUrl, downloadUrl, gallery } = req.body;
-      
       const result = await client.query(
         `UPDATE games 
          SET title = $1, image_url = $2, category = $3, tags = $4, theme = $5, description = $6, video_url = $7, download_url = $8, gallery = $9 
          WHERE id = $10 RETURNING *`,
-        [title, imageUrl, category, tags || [], theme || null, description, videoUrl || null, downloadUrl, gallery || [], id]
+        [title, imageUrl, category, safeTags, safeTheme, description, safeVideoUrl, safeDownloadUrl, safeGallery, id]
       );
       
       if (result.rows.length === 0) {
@@ -49,6 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(405).json({ message: 'Method not allowed' });
     }
   } catch (error) {
+    console.error("API Error in /api/admin/games:", error);
     res.status(500).json({ error: (error as Error).message });
   } finally {
     client.release();
