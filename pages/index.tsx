@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import type { GetStaticProps } from 'next';
@@ -179,7 +180,7 @@ const Home: React.FC<HomeProps> = ({ searchQuery, searchActive, games }) => {
                 <div className="bg-gradient-to-r from-purple-800 to-indigo-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-6 my-12">
                     <div className="flex items-center space-x-4">
                         <div className="bg-yellow-400 p-2 rounded-lg relative"><span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-purple-800">1</span><svg className="w-8 h-8 text-yellow-900" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg></div>
-                        <div><h3 className="text-lg sm:text-xl font-bold">Climb the new CrazyGames leaderboards</h3></div>
+                        <div><h3 className="text-lg sm:text-xl font-bold">Climb the new G2gaming leaderboards</h3></div>
                     </div>
                     <button className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex-shrink-0">Explore games</button>
                 </div>

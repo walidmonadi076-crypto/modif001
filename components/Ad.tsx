@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useAds } from '../contexts/AdContext';
 
 interface AdProps {
@@ -7,42 +7,8 @@ interface AdProps {
 
 const Ad: React.FC<AdProps> = ({ placement }) => {
   const { ads, isLoading } = useAds();
-  const adContainerRef = useRef<HTMLDivElement>(null);
   
   const ad = ads.find(a => a.placement === placement);
-
-  useEffect(() => {
-    if (ad && ad.code && adContainerRef.current) {
-      const container = adContainerRef.current;
-      // Clear previous ad content to prevent duplicates
-      container.innerHTML = '';
-      // Append a temporary div to inject the script into
-      const adWrapper = document.createElement('div');
-      adWrapper.innerHTML = ad.code;
-      container.appendChild(adWrapper);
-      
-      const scripts = Array.from(adWrapper.getElementsByTagName('script'));
-      scripts.forEach(oldScript => {
-        const newScript = document.createElement('script');
-        
-        // Copy attributes
-        Array.from(oldScript.attributes).forEach(attr => {
-          newScript.setAttribute(attr.name, attr.value);
-        });
-
-        // Copy content
-        if (oldScript.src) {
-            newScript.src = oldScript.src;
-            newScript.async = oldScript.async;
-        } else {
-            newScript.innerHTML = oldScript.innerHTML;
-        }
-        
-        // Replace old script with new one to trigger execution
-        oldScript.parentNode?.replaceChild(newScript, oldScript);
-      });
-    }
-  }, [ad]);
 
   const getAdDimensions = () => {
     switch (placement) {
@@ -62,10 +28,11 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
 
   const { width, height, text } = getAdDimensions();
 
+  // Loading state placeholder
   if (isLoading) {
     return (
       <div 
-        style={{ width: `${width}px`, height: `${height}px` }} 
+        style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
         className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center animate-pulse"
       >
         <span className="text-gray-500 text-sm font-semibold">Loading Ad...</span>
@@ -73,10 +40,11 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     );
   }
 
+  // If no ad code is available, show a placeholder
   if (!ad || !ad.code) {
     return (
        <div 
-        style={{ width: `${width}px`, height: `${height}px` }} 
+        style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
         className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center"
       >
         <span className="text-gray-500 text-sm font-semibold">{text}</span>
@@ -84,11 +52,28 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     );
   }
 
+  // The iframe component that isolates the ad code
   return (
-    <div 
-      ref={adContainerRef}
-      style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }}
-      className="relative overflow-hidden"
+    <iframe
+      title={`Ad for ${placement}`}
+      srcDoc={`
+        <html>
+          <head>
+            <style>
+              body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+              * { max-width: 100%; height: auto; }
+            </style>
+          </head>
+          <body>
+            ${ad.code}
+          </body>
+        </html>
+      `}
+      width={width}
+      height={height}
+      style={{ maxWidth: '100%', border: 'none' }}
+      sandbox="allow-scripts allow-same-origin" // Security sandbox
+      scrolling="no"
     />
   );
 };

@@ -1,12 +1,12 @@
 import React, { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Head from 'next/head';
 import Image from 'next/image';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { getGameById, getAllGames } from '../../lib/data';
 import type { Game } from '../../types';
 import Ad from '../../components/Ad';
+import SEO from '../../components/SEO';
 
 declare global {
     interface Window {
@@ -63,10 +63,11 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
 
     return (
         <>
-            <Head>
-                <title>{game.title} | Crazy Games Clone</title>
-                <meta name="description" content={game.description} />
-            </Head>
+            <SEO
+                title={game.title}
+                description={game.description}
+                image={game.imageUrl}
+            />
             <div className="max-w-7xl mx-auto">
                 <div className="mb-4">
                     <Link href="/" className="text-sm text-purple-400 hover:underline">&lt; Back to Games</Link>

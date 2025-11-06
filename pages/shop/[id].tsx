@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Head from 'next/head';
 import Image from 'next/image';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { getProductById, getAllProducts } from '../../lib/data';
 import type { Product } from '../../types';
 import Ad from '../../components/Ad';
+import SEO from '../../components/SEO';
 
 interface ProductDetailPageProps {
     product: Product;
@@ -33,10 +33,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
     
     return (
         <>
-            <Head>
-                <title>{product.name} | Crazy Games Clone</title>
-                <meta name="description" content={product.description} />
-            </Head>
+            <SEO
+                title={product.name}
+                description={product.description}
+                image={product.imageUrl}
+            />
             <div className="max-w-6xl mx-auto">
                 <div className="mb-4">
                     <Link href="/shop" className="text-sm text-purple-400 hover:underline">&lt; Back to Shop</Link>

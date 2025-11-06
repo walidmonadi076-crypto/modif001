@@ -324,19 +324,19 @@ export default function AdminPanel() {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <Head>
-          <title>Connexion Admin</title>
+          <title>Admin Login - G2gaming</title>
         </Head>
         <div className="bg-gray-800 p-8 rounded-lg max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-6 text-center">Panneau d'Administration</h1>
+          <h1 className="text-2xl font-bold mb-6 text-center">Admin Panel</h1>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block mb-2">Mot de passe</label>
+              <label className="block mb-2">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-purple-600"
-                placeholder="Entrez le mot de passe admin"
+                placeholder="Enter admin password"
                 required
               />
             </div>
@@ -349,7 +349,7 @@ export default function AdminPanel() {
               type="submit"
               className="w-full bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded font-semibold transition-colors"
             >
-              Se connecter
+              Log in
             </button>
           </form>
         </div>
@@ -385,7 +385,7 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <Head>
-        <title>Panneau d'Administration</title>
+        <title>Admin Panel - G2gaming</title>
       </Head>
       
       <ToastContainer toasts={toasts} onClose={removeToast} />
@@ -401,7 +401,7 @@ export default function AdminPanel() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Panneau d'Administration</h1>
+          <h1 className="text-3xl font-bold">Admin Panel</h1>
           <div className="flex gap-4">
             <a href="/" className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">
               Retour au Site

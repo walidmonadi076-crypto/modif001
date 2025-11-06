@@ -9,13 +9,13 @@ interface SEOProps {
 }
 
 export default function SEO({
-  title = 'Crazy Games Clone - Free Online Games',
-  description = 'Play free online games including action, adventure, puzzle, and more. Discover new games every day!',
+  title = 'G2gaming - Download Free Games, Guides & Gear',
+  description = 'Your ultimate destination for free downloadable games, expert gaming guides and techniques, and top-quality gear to enhance your gameplay. G2gaming has everything you need to level up.',
   image = 'https://picsum.photos/seed/ogimage/1200/630',
   url = '',
-  keywords = ['games', 'free games', 'online games', 'browser games', 'crazy games'],
+  keywords = ['G2gaming', 'download games', 'free games', 'pc games', 'gaming guides', 'gaming tips', 'gaming techniques', 'gaming gear', 'gaming accessories', 'gaming products'],
 }: SEOProps) {
-  const fullTitle = title.includes('Crazy Games') ? title : `${title} | Crazy Games Clone`;
+  const fullTitle = title.includes('G2gaming') ? title : `${title} | G2gaming`;
   const fullUrl = url ? `https://yoursite.com${url}` : 'https://yoursite.com';
 
   return (
@@ -29,7 +29,7 @@ export default function SEO({
       <meta property="og:image" content={image} />
       <meta property="og:url" content={fullUrl} />
       <meta property="og:type" content="website" />
-      <meta property="og:site_name" content="Crazy Games Clone" />
+      <meta property="og:site_name" content="G2gaming" />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />

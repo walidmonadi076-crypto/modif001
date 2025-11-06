@@ -1,13 +1,14 @@
 
+
 import React from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Head from 'next/head';
 import Image from 'next/image';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { getBlogPostById, getAllBlogPosts, getCommentsByBlogId } from '../../lib/data';
 import type { BlogPost, Comment } from '../../types';
 import Ad from '../../components/Ad';
+import SEO from '../../components/SEO';
 
 const StarRating: React.FC<{ rating: number; className?: string }> = ({ rating, className = '' }) => {
     const numericRating = Number(rating || 0);
@@ -43,10 +44,11 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ post, comments }) => {
     
     return (
         <>
-            <Head>
-                <title>{post.title} | Crazy Games Clone</title>
-                <meta name="description" content={post.summary} />
-            </Head>
+            <SEO
+                title={post.title}
+                description={post.summary}
+                image={post.imageUrl}
+            />
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <aside className="hidden lg:block lg:col-span-2">
                     <div className="sticky top-24">
