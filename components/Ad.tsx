@@ -51,29 +51,38 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
       </div>
     );
   }
+  
+  const iframeContent = `
+    <html>
+      <head>
+        <style>
+          /* This style block is crucial for containing the ad script */
+          html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* The key to preventing scrollbars */
+          }
+        </style>
+      </head>
+      <body>
+        ${ad.code}
+      </body>
+    </html>
+  `;
+
 
   // The iframe component that isolates the ad code
   return (
     <iframe
       title={`Ad for ${placement}`}
-      srcDoc={`
-        <html>
-          <head>
-            <style>
-              body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-              * { max-width: 100%; height: auto; }
-            </style>
-          </head>
-          <body>
-            ${ad.code}
-          </body>
-        </html>
-      `}
+      srcDoc={iframeContent}
       width={width}
       height={height}
       style={{ maxWidth: '100%', border: 'none' }}
-      sandbox="allow-scripts allow-same-origin" // Security sandbox
-      scrolling="no"
+      sandbox="allow-scripts allow-same-origin" // Security sandbox to isolate the ad
+      scrolling="no" // Explicitly disable scrolling on the iframe element
     />
   );
 };
