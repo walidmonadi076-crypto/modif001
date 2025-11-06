@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import type { Game, BlogPost, Product } from '../types';
@@ -36,52 +36,9 @@ export default function AdminPanel() {
   const [itemsPerPage] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Correction: les hooks useMemo doivent être appelés avant les retours conditionnels.
-  const currentData = useMemo(() => 
-      activeTab === 'games' ? games :
-      activeTab === 'blogs' ? blogs :
-      products,
-    [activeTab, games, blogs, products]
-  );
-
-  const filteredData = useMemo(() => 
-    currentData.filter((item: any) => {
-      const query = searchQuery.toLowerCase();
-      return (
-        (item.title && item.title.toLowerCase().includes(query)) ||
-        (item.name && item.name.toLowerCase().includes(query)) ||
-        (item.category && item.category.toLowerCase().includes(query)) ||
-        (item.author && item.author.toLowerCase().includes(query))
-      );
-    }),
-    [currentData, searchQuery]
-  );
-
   const handleLogout = useCallback(async () => {
     await fetch('/api/auth/logout');
     setIsAuthenticated(false);
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [gamesRes, blogsRes, productsRes] = await Promise.all([
-        fetch('/api/games'),
-        fetch('/api/blogs'),
-        fetch('/api/products'),
-      ]);
-      const [gamesData, blogsData, productsData] = await Promise.all([
-        gamesRes.json(),
-        blogsRes.json(),
-        productsRes.json(),
-      ]);
-      setGames(gamesData);
-      setBlogs(blogsData);
-      setProducts(productsData);
-    } catch (error) {
-      console.error('Error fetching all data:', error);
-    }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -91,15 +48,10 @@ export default function AdminPanel() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
+      setCurrentPage(1);
+      setSearchQuery('');
     }
-  }, [isAuthenticated, fetchData]);
-  
-  // Réinitialiser la recherche et la pagination lorsque l'onglet change
-  useEffect(() => {
-    setCurrentPage(1);
-    setSearchQuery('');
-  }, [activeTab]);
-
+  }, [activeTab, isAuthenticated]);
 
   // Déconnexion automatique pour inactivité
   useEffect(() => {
@@ -164,6 +116,28 @@ export default function AdminPanel() {
     }
   };
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      if (activeTab === 'games') {
+        const res = await fetch('/api/games');
+        const data = await res.json();
+        setGames(data);
+      } else if (activeTab === 'blogs') {
+        const res = await fetch('/api/blogs');
+        const data = await res.json();
+        setBlogs(data);
+      } else if (activeTab === 'products') {
+        const res = await fetch('/api/products');
+        const data = await res.json();
+        setProducts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+    setLoading(false);
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément?')) return;
 
@@ -172,26 +146,22 @@ export default function AdminPanel() {
         alert('Erreur de session. Veuillez vous reconnecter.');
         return;
     }
-    
-    // Mise à jour locale pour la réactivité
-    if (activeTab === 'games') setGames(prev => prev.filter(item => item.id !== id));
-    if (activeTab === 'blogs') setBlogs(prev => prev.filter(item => item.id !== id));
-    if (activeTab === 'products') setProducts(prev => prev.filter(item => item.id !== id));
 
     try {
       const res = await fetch(`/api/admin/${activeTab}?id=${id}`, {
         method: 'DELETE',
         headers: { 'X-CSRF-Token': csrfToken },
       });
-      if (!res.ok) {
+      if (res.ok) {
+        alert('Élément supprimé avec succès!');
+        fetchData();
+      } else {
         const error = await res.json();
-        alert(`Erreur: ${error.error || error.message || 'La suppression a échoué. Rétablissement des données.'}`);
-        fetchData(); // Rétablir en cas d'échec
+        alert(`Erreur: ${error.error || error.message || 'La suppression a échoué'}`);
       }
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('Erreur lors de la suppression. Rétablissement des données.');
-      fetchData(); // Rétablir en cas d'échec
+      alert('Erreur lors de la suppression');
     }
   };
 
@@ -214,20 +184,10 @@ export default function AdminPanel() {
       });
 
       if (res.ok) {
-        const savedItem = await res.json();
+        alert(editingItem ? 'Élément modifié avec succès!' : 'Élément créé avec succès!');
         setShowForm(false);
         setEditingItem(null);
-
-        // Mise à jour locale pour la réactivité
-        if (method === 'POST') {
-            if (activeTab === 'games') setGames(prev => [savedItem, ...prev]);
-            if (activeTab === 'blogs') setBlogs(prev => [savedItem, ...prev]);
-            if (activeTab === 'products') setProducts(prev => [savedItem, ...prev]);
-        } else { // PUT
-            if (activeTab === 'games') setGames(prev => prev.map(item => item.id === savedItem.id ? savedItem : item));
-            if (activeTab === 'blogs') setBlogs(prev => prev.map(item => item.id === savedItem.id ? savedItem : item));
-            if (activeTab === 'products') setProducts(prev => prev.map(item => item.id === savedItem.id ? savedItem : item));
-        }
+        fetchData();
       } else {
         const error = await res.json();
         alert(`Erreur: ${error.error || error.message || 'La sauvegarde a échoué'}`);
@@ -292,7 +252,22 @@ export default function AdminPanel() {
       </div>
     );
   }
-  
+
+  const currentData =
+    activeTab === 'games' ? games :
+    activeTab === 'blogs' ? blogs :
+    products;
+
+  const filteredData = currentData.filter((item: any) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (item.title && item.title.toLowerCase().includes(query)) ||
+      (item.name && item.name.toLowerCase().includes(query)) ||
+      (item.category && item.category.toLowerCase().includes(query)) ||
+      (item.author && item.author.toLowerCase().includes(query))
+    );
+  });
+
   const paginationData = paginate(filteredData, currentPage, itemsPerPage);
 
   return (
@@ -356,7 +331,7 @@ export default function AdminPanel() {
 
         <div className="bg-gray-800 rounded-lg p-6">
           {loading ? (
-            <div className="text-center py-10">Chargement des données...</div>
+            <div className="text-center py-10">Chargement...</div>
           ) : (
             <>
               <div className="overflow-x-auto">
