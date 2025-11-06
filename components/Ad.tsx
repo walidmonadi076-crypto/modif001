@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useAds } from '../contexts/AdContext';
 
 interface AdProps {
-  placement: 'game_vertical' | 'game_horizontal' | 'shop_square';
+  placement: 'game_vertical' | 'game_horizontal' | 'shop_square' | 'blog_skyscraper_left' | 'blog_skyscraper_right';
 }
 
 const Ad: React.FC<AdProps> = ({ placement }) => {
@@ -14,9 +14,14 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
   useEffect(() => {
     if (ad && ad.code && adContainerRef.current) {
       const container = adContainerRef.current;
-      container.innerHTML = ad.code;
+      // Clear previous ad content to prevent duplicates
+      container.innerHTML = '';
+      // Append a temporary div to inject the script into
+      const adWrapper = document.createElement('div');
+      adWrapper.innerHTML = ad.code;
+      container.appendChild(adWrapper);
       
-      const scripts = Array.from(container.getElementsByTagName('script'));
+      const scripts = Array.from(adWrapper.getElementsByTagName('script'));
       scripts.forEach(oldScript => {
         const newScript = document.createElement('script');
         
@@ -26,8 +31,13 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
         });
 
         // Copy content
-        newScript.innerHTML = oldScript.innerHTML;
-
+        if (oldScript.src) {
+            newScript.src = oldScript.src;
+            newScript.async = oldScript.async;
+        } else {
+            newScript.innerHTML = oldScript.innerHTML;
+        }
+        
         // Replace old script with new one to trigger execution
         oldScript.parentNode?.replaceChild(newScript, oldScript);
       });
@@ -42,6 +52,9 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
         return { width: 728, height: 90, text: 'Horizontal Ad (728x90)' };
       case 'shop_square':
         return { width: 300, height: 250, text: 'Square Ad (300x250)' };
+      case 'blog_skyscraper_left':
+      case 'blog_skyscraper_right':
+        return { width: 160, height: 600, text: 'Skyscraper Ad (160x600)' };
       default:
         return { width: 300, height: 250, text: 'Ad Placeholder' };
     }
@@ -74,8 +87,8 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
   return (
     <div 
       ref={adContainerRef}
-      style={{ width: `${width}px`, height: `${height}px` }}
-      className="flex items-center justify-center"
+      style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }}
+      className="relative overflow-hidden"
     />
   );
 };

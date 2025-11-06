@@ -7,6 +7,7 @@ import Image from 'next/image';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { getBlogPostById, getAllBlogPosts, getCommentsByBlogId } from '../../lib/data';
 import type { BlogPost, Comment } from '../../types';
+import Ad from '../../components/Ad';
 
 const StarRating: React.FC<{ rating: number; className?: string }> = ({ rating, className = '' }) => {
     const numericRating = Number(rating || 0);
@@ -46,53 +47,67 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ post, comments }) => {
                 <title>{post.title} | Crazy Games Clone</title>
                 <meta name="description" content={post.summary} />
             </Head>
-            <div className="max-w-4xl mx-auto">
-                 <div className="mb-4">
-                    <Link href="/blogs" className="text-sm text-purple-400 hover:underline">&lt; Back to Blogs</Link>
-                </div>
-                <header className="mb-8">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4">{post.title}</h1>
-                    <div className="flex items-center text-sm text-gray-400">
-                        <span>By {post.author}</span><span className="mx-2">&bull;</span><span>Published on {post.publishDate}</span>
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <aside className="hidden lg:block lg:col-span-2">
+                    <div className="sticky top-24">
+                        <Ad placement="blog_skyscraper_left" />
                     </div>
-                </header>
-                <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-8 shadow-lg relative">
-                    {post.videoUrl ? <video src={post.videoUrl} controls autoPlay muted className="w-full h-full object-contain"></video> : <Image src={post.imageUrl} alt={post.title} fill sizes="100vw" className="object-cover" />}
-                </div>
-                <div className="bg-gray-800 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center gap-6 border border-purple-500/30">
-                    <div className="flex-grow">
-                        <h3 className="text-xl font-bold text-white">Expert Rating</h3>
-                        <p className="text-gray-400 mb-2">Our overall score for this product.</p>
-                        <StarRating rating={post.rating} />
+                </aside>
+                
+                <main className="col-span-12 lg:col-span-8">
+                     <div className="mb-4">
+                        <Link href="/blogs" className="text-sm text-purple-400 hover:underline">&lt; Back to Blogs</Link>
                     </div>
-                    <a href={post.affiliateUrl} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto text-center bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-green-600 transition-colors duration-300 transform hover:scale-105 flex-shrink-0">Check Price & Buy</a>
-                </div>
-                <article className="prose prose-invert prose-lg max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-purple-400 prose-strong:text-white prose-li:marker:text-gray-500" dangerouslySetInnerHTML={{ __html: post.content }} />
-                <div className="mt-12 pt-8 border-t border-gray-700">
-                    <h2 className="text-2xl font-bold text-white mb-6">{comments.length > 0 ? `${comments.length} Comments & Testimonials` : 'Leave the First Comment'}</h2>
-                    <div className="space-y-6 mb-8">
-                        {comments.map(comment => (
-                            <div key={comment.id} className="flex items-start space-x-4">
-                                <Image src={comment.avatarUrl} alt={comment.author} width={48} height={48} className="rounded-full" />
-                                <div className="flex-grow bg-gray-800 p-4 rounded-lg">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <p className="font-bold text-white">{comment.author}</p>
-                                        <p className="text-xs text-gray-500">{comment.date}</p>
+                    <header className="mb-8">
+                        <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4">{post.title}</h1>
+                        <div className="flex items-center text-sm text-gray-400">
+                            <span>By {post.author}</span><span className="mx-2">&bull;</span><span>Published on {post.publishDate}</span>
+                        </div>
+                    </header>
+                    <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-8 shadow-lg relative">
+                        {post.videoUrl ? <video src={post.videoUrl} controls autoPlay muted className="w-full h-full object-contain"></video> : <Image src={post.imageUrl} alt={post.title} fill sizes="100vw" className="object-cover" />}
+                    </div>
+                    <div className="bg-gray-800 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center gap-6 border border-purple-500/30">
+                        <div className="flex-grow">
+                            <h3 className="text-xl font-bold text-white">Expert Rating</h3>
+                            <p className="text-gray-400 mb-2">Our overall score for this product.</p>
+                            <StarRating rating={post.rating} />
+                        </div>
+                        <a href={post.affiliateUrl} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto text-center bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-green-600 transition-colors duration-300 transform hover:scale-105 flex-shrink-0">Check Price & Buy</a>
+                    </div>
+                    <article className="prose prose-invert prose-lg max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-purple-400 prose-strong:text-white prose-li:marker:text-gray-500" dangerouslySetInnerHTML={{ __html: post.content }} />
+                    <div className="mt-12 pt-8 border-t border-gray-700">
+                        <h2 className="text-2xl font-bold text-white mb-6">{comments.length > 0 ? `${comments.length} Comments & Testimonials` : 'Leave the First Comment'}</h2>
+                        <div className="space-y-6 mb-8">
+                            {comments.map(comment => (
+                                <div key={comment.id} className="flex items-start space-x-4">
+                                    <Image src={comment.avatarUrl} alt={comment.author} width={48} height={48} className="rounded-full" />
+                                    <div className="flex-grow bg-gray-800 p-4 rounded-lg">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <p className="font-bold text-white">{comment.author}</p>
+                                            <p className="text-xs text-gray-500">{comment.date}</p>
+                                        </div>
+                                        <p className="text-gray-300">{comment.text}</p>
                                     </div>
-                                    <p className="text-gray-300">{comment.text}</p>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-4">Leave a Comment</h3>
+                            <form className="bg-gray-800 p-6 rounded-lg space-y-4">
+                                <textarea className="w-full bg-gray-900 rounded-md p-3 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500" rows={4} placeholder="Write your comment here..."></textarea>
+                                <input type="text" className="w-full bg-gray-900 rounded-md p-3 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500" placeholder="Your Name" />
+                                <button type="submit" className="bg-purple-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-purple-700 transition-colors">Post Comment</button>
+                            </form>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-white mb-4">Leave a Comment</h3>
-                        <form className="bg-gray-800 p-6 rounded-lg space-y-4">
-                            <textarea className="w-full bg-gray-900 rounded-md p-3 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500" rows={4} placeholder="Write your comment here..."></textarea>
-                            <input type="text" className="w-full bg-gray-900 rounded-md p-3 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500" placeholder="Your Name" />
-                            <button type="submit" className="bg-purple-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-purple-700 transition-colors">Post Comment</button>
-                        </form>
+                </main>
+
+                <aside className="hidden lg:block lg:col-span-2">
+                    <div className="sticky top-24">
+                        <Ad placement="blog_skyscraper_right" />
                     </div>
-                </div>
+                </aside>
             </div>
         </>
     );

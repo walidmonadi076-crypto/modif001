@@ -21,7 +21,7 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-const AD_PLACEMENTS = ['game_vertical', 'game_horizontal', 'shop_square'];
+const AD_PLACEMENTS = ['game_vertical', 'game_horizontal', 'shop_square', 'blog_skyscraper_left', 'blog_skyscraper_right'];
 
 export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -362,7 +362,7 @@ export default function AdminPanel() {
       {AD_PLACEMENTS.map(placement => (
         <div key={placement}>
           <label htmlFor={`ad-${placement}`} className="block text-lg font-semibold text-gray-200 mb-2 capitalize">
-            {placement.replace('_', ' ')}
+            {placement.replace(/_/g, ' ')}
           </label>
           <textarea
             id={`ad-${placement}`}
