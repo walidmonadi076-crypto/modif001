@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import type { Game, BlogPost, Product } from '../types';
@@ -37,6 +37,11 @@ export default function AdminPanel() {
   const [itemsPerPage] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const handleLogout = useCallback(async () => {
+    await fetch('/api/auth/logout');
+    setIsAuthenticated(false);
+  }, []);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -48,6 +53,35 @@ export default function AdminPanel() {
       setSearchQuery('');
     }
   }, [activeTab, isAuthenticated]);
+
+  // Déconnexion automatique pour inactivité
+  useEffect(() => {
+    let logoutTimer: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(logoutTimer);
+      logoutTimer = setTimeout(() => {
+        alert("Vous avez été déconnecté pour inactivité.");
+        handleLogout();
+      }, 10 * 60 * 1000); // 10 minutes
+    };
+
+    const handleActivity = () => {
+      resetTimer();
+    };
+
+    if (isAuthenticated) {
+      const activityEvents = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
+      activityEvents.forEach(event => window.addEventListener(event, handleActivity));
+      resetTimer();
+
+      return () => {
+        clearTimeout(logoutTimer);
+        activityEvents.forEach(event => window.removeEventListener(event, handleActivity));
+      };
+    }
+  }, [isAuthenticated, handleLogout]);
+
 
   const checkAuth = async () => {
     try {
@@ -81,11 +115,6 @@ export default function AdminPanel() {
     } catch (error) {
       setLoginError('Erreur de connexion');
     }
-  };
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout');
-    setIsAuthenticated(false);
   };
 
   const fetchData = async () => {

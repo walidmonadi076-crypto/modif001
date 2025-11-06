@@ -218,11 +218,11 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
       <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-gray-700 flex justify-between items-center">
             <h2 className="text-xl font-bold">{item ? 'Modifier' : 'Ajouter'} {type.slice(0, -1)}</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
+            <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
         </div>
         <form onSubmit={handleSubmitForm} className="p-6 space-y-4 overflow-y-auto">
             {type === 'games' && renderGameFields()}
