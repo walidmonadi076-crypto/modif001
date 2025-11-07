@@ -8,6 +8,7 @@ import type { BlogPost, Comment } from '../../types';
 import Ad from '../../components/Ad';
 import SEO from '../../components/SEO';
 import StarRating from '../../components/StarRating';
+import CommentCard from '../../components/CommentCard';
 
 interface BlogDetailPageProps { post: BlogPost; comments: Comment[]; }
 
@@ -64,9 +65,32 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ post, comments }) => {
                     
                     <article className="prose prose-invert prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
 
+                    {post.affiliateUrl && (
+                        <div className="my-12 p-6 bg-gray-800 rounded-2xl text-center shadow-lg">
+                            <h3 className="text-xl font-bold text-white mb-2">Did you find this review helpful?</h3>
+                            <p className="text-gray-400 mb-6">Support our work by checking out this product through the link below.</p>
+                            <a
+                                href={post.affiliateUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-green-600 transition-colors"
+                            >
+                                Explore Here
+                            </a>
+                        </div>
+                    )}
+
                     <div className="mt-12 pt-8 border-t border-gray-700">
-                        <h2 className="text-2xl font-bold text-white mb-6">Comments</h2>
-                        {/* ... (Comments rendering and form) */}
+                        <h2 className="text-2xl font-bold text-white mb-6">Comments ({comments.length})</h2>
+                        {comments.length > 0 ? (
+                            <div className="space-y-6">
+                                {comments.map(comment => (
+                                    <CommentCard key={comment.id} comment={comment} />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-400">Be the first to leave a comment!</p>
+                        )}
                     </div>
                 </main>
 
