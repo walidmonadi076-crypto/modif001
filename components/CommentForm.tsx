@@ -1,60 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type { Comment } from '../types';
-
-declare global {
-  interface Window {
-    grecaptcha: any;
-  }
-}
+import React, { useState, useEffect } from 'react';
 
 interface CommentFormProps {
   postId: number;
-  onCommentAdded: (newComment: Comment) => void;
+  onCommentAdded: () => void;
 }
-
-const RECAPTCHA_SITE_KEY = '6Lcm1QUsAAAAAP4bS9QiKH9jCpDXQ3ktJsgQwcO4';
 
 const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => {
   const [author, setAuthor] = useState('');
   const [text, setText] = useState('');
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [num1, setNum1] = useState(0);
+  const [num2, setNum2] = useState(0);
+  const [answer, setAnswer] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const recaptchaRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<number | null>(null);
-
   useEffect(() => {
-    const renderRecaptcha = () => {
-      if (window.grecaptcha && window.grecaptcha.render && recaptchaRef.current && widgetIdRef.current === null) {
-        widgetIdRef.current = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: RECAPTCHA_SITE_KEY,
-          callback: (token: string) => setRecaptchaToken(token),
-          'expired-callback': () => setRecaptchaToken(null),
-          theme: 'dark'
-        });
-      }
-    };
-    
-    // Poll for the grecaptcha object to be ready
-    const interval = setInterval(() => {
-        if (typeof window.grecaptcha !== 'undefined') {
-            renderRecaptcha();
-            clearInterval(interval);
-        }
-    }, 200);
-
-    return () => clearInterval(interval);
+    generateNewQuestion();
   }, []);
+
+  const generateNewQuestion = () => {
+    setNum1(Math.floor(Math.random() * 10) + 1);
+    setNum2(Math.floor(Math.random() * 10) + 1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recaptchaToken) {
-        setError('Please complete the reCAPTCHA verification.');
-        return;
-    }
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -65,7 +37,7 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ postId, author, text, recaptchaToken }),
+        body: JSON.stringify({ postId, author, text, num1, num2, answer }),
       });
 
       const data = await response.json();
@@ -74,17 +46,12 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
         throw new Error(data.error || 'Something went wrong.');
       }
       
-      setSuccess('Thank you! Your comment has been submitted and is awaiting moderation.');
+      setSuccess('Thank you! Your comment has been submitted.');
       setAuthor('');
       setText('');
-      
-      // Reset reCAPTCHA
-      if (window.grecaptcha && widgetIdRef.current !== null) {
-        window.grecaptcha.reset(widgetIdRef.current);
-      }
-      setRecaptchaToken(null);
-      
-      onCommentAdded(data);
+      setAnswer('');
+      generateNewQuestion();
+      onCommentAdded();
       
       // Hide success message after a few seconds
       setTimeout(() => setSuccess(null), 5000);
@@ -102,7 +69,8 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
       {error && <div className="p-3 bg-red-900/50 border border-red-700 text-red-300 rounded-md">{error}</div>}
       {success && <div className="p-3 bg-green-900/50 border border-green-700 text-green-300 rounded-md">{success}</div>}
 
-      <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
           <label htmlFor="author" className="block text-sm font-medium text-gray-300 mb-1">Name</label>
           <input
             id="author"
@@ -112,6 +80,20 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
             required
             className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
+        </div>
+        <div>
+            <label htmlFor="verification" className="block text-sm font-medium text-gray-300 mb-1">
+                Human Verification: What is {num1} + {num2}?
+            </label>
+            <input
+                id="verification"
+                type="number"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                required
+                className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+        </div>
       </div>
       <div>
         <label htmlFor="text" className="block text-sm font-medium text-gray-300 mb-1">Your Comment</label>
@@ -124,13 +106,11 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
           className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
       </div>
-      
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div ref={recaptchaRef}></div>
+      <div className="text-right">
         <button
           type="submit"
-          disabled={isLoading || !recaptchaToken}
-          className="w-full sm:w-auto px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-md font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+          disabled={isLoading}
+          className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-md font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Submitting...' : 'Post Comment'}
         </button>
