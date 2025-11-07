@@ -82,9 +82,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
 
 export const getStaticPaths: GetStaticPaths = async () => {
     const products = await getAllProducts();
-    const paths = products.map(product => ({
-        params: { slug: product.slug },
-    }));
+    const paths = products
+        .filter(product => product && product.slug) // Ensures only products with slugs are processed
+        .map(product => ({
+            params: { slug: product.slug },
+        }));
     return { paths, fallback: 'blocking' };
 };
 

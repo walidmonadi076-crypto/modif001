@@ -89,9 +89,11 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
 
 export const getStaticPaths: GetStaticPaths = async () => {
     const games = await getAllGames();
-    const paths = games.map(game => ({
-        params: { slug: game.slug },
-    }));
+    const paths = games
+        .filter(game => game && game.slug) // Ensures only games with slugs are processed
+        .map(game => ({
+            params: { slug: game.slug },
+        }));
     return { paths, fallback: 'blocking' };
 };
 
