@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
-import type { Game, BlogPost, Product, SocialLink, Ad } from '../../types';
+import type { Game, BlogPost, Product, SocialLink, Ad, Comment } from '../../types';
 import AdminDashboard from '../../components/AdminDashboard';
 import { paginate } from '../../lib/pagination';
 import AdminForm from '../../components/AdminForm';
@@ -21,11 +21,12 @@ export default function AdminPanel() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [activeTab, setActiveTab] = useState<'games' | 'blogs' | 'products' | 'social-links' | 'ads' | 'settings'>('games');
+  const [activeTab, setActiveTab] = useState<'games' | 'blogs' | 'products' | 'social-links' | 'ads' | 'settings' | 'comments'>('games');
   const [games, setGames] = useState<Game[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [ads, setAds] = useState<Record<string, string>>({});
   const [ogadsScript, setOgadsScript] = useState('');
   const [loading, setLoading] = useState(true);
@@ -51,15 +52,21 @@ export default function AdminPanel() {
       case 'blogs': return blogs;
       case 'products': return products;
       case 'social-links': return socialLinks;
+      case 'comments': return comments;
       default: return [];
     }
-  }, [activeTab, games, blogs, products, socialLinks]);
+  }, [activeTab, games, blogs, products, socialLinks, comments]);
 
   const filteredData = useMemo(() => currentData.filter((item: any) => {
     const query = searchQuery.toLowerCase();
+    if (activeTab === 'comments') {
+        return (item.author && item.author.toLowerCase().includes(query)) ||
+               (item.text && item.text.toLowerCase().includes(query)) ||
+               (item.blog_title && item.blog_title.toLowerCase().includes(query));
+    }
     return (item.title && item.title.toLowerCase().includes(query)) ||
            (item.name && item.name.toLowerCase().includes(query));
-  }), [currentData, searchQuery]);
+  }), [currentData, searchQuery, activeTab]);
 
   const paginationData = useMemo(() => paginate(filteredData, currentPage, itemsPerPage), [filteredData, currentPage, itemsPerPage]);
 
@@ -71,22 +78,24 @@ export default function AdminPanel() {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [gamesRes, blogsRes, productsRes, socialLinksRes, adsRes, settingsRes] = await Promise.all([
+      const [gamesRes, blogsRes, productsRes, socialLinksRes, adsRes, settingsRes, commentsRes] = await Promise.all([
         fetch('/api/admin/games'),
         fetch('/api/admin/blogs'),
         fetch('/api/admin/products'),
         fetch('/api/admin/social-links'),
         fetch('/api/admin/ads'),
         fetch('/api/admin/settings'),
+        fetch('/api/admin/comments'),
       ]);
-      if (!gamesRes.ok || !blogsRes.ok || !productsRes.ok || !socialLinksRes.ok || !adsRes.ok || !settingsRes.ok) throw new Error('Failed to fetch initial data');
-      const [gamesData, blogsData, productsData, socialLinksData, adsData, settingsData] = await Promise.all([
-        gamesRes.json(), blogsRes.json(), productsRes.json(), socialLinksRes.json(), adsRes.json(), settingsRes.json()
+      if (!gamesRes.ok || !blogsRes.ok || !productsRes.ok || !socialLinksRes.ok || !adsRes.ok || !settingsRes.ok || !commentsRes.ok) throw new Error('Failed to fetch initial data');
+      const [gamesData, blogsData, productsData, socialLinksData, adsData, settingsData, commentsData] = await Promise.all([
+        gamesRes.json(), blogsRes.json(), productsRes.json(), socialLinksRes.json(), adsRes.json(), settingsRes.json(), commentsRes.json()
       ]);
       setGames(gamesData);
       setBlogs(blogsData);
       setProducts(productsData);
       setSocialLinks(socialLinksData);
+      setComments(commentsData);
       const adsObject = adsData.reduce((acc: Record<string, string>, ad: Ad) => ({ ...acc, [ad.placement]: ad.code || '' }), {});
       setAds(adsObject);
       setOgadsScript(settingsData.ogads_script_src || '');
@@ -154,6 +163,27 @@ export default function AdminPanel() {
       addToast('Erreur lors de la suppression', 'error');
     }
   };
+  
+  const handleApproveComment = async (id: number) => {
+    const csrfToken = getCookie('csrf_token');
+    if (!csrfToken) return addToast('Erreur de session. Veuillez vous reconnecter.', 'error');
+    try {
+        const res = await fetch(`/api/admin/comments`, { 
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ id, status: 'approved' })
+        });
+        if (res.ok) {
+            addToast('Commentaire approuvé!', 'success');
+            fetchAllData();
+        } else {
+            const error = await res.json();
+            addToast(`Erreur: ${error.error || 'L\'approbation a échoué'}`, 'error');
+        }
+    } catch (error) {
+        addToast('Erreur lors de l\'approbation.', 'error');
+    }
+  }
 
   const handleSubmit = async (formData: any) => {
     const csrfToken = getCookie('csrf_token');
@@ -259,9 +289,9 @@ export default function AdminPanel() {
             <AdminDashboard games={games} blogs={blogs} products={products} />
             
             <div className="flex gap-4 mb-6 flex-wrap">
-              {['games', 'blogs', 'products', 'social-links', 'ads', 'settings'].map((tab) => (
+              {['games', 'blogs', 'products', 'comments', 'social-links', 'ads', 'settings'].map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-6 py-3 rounded-lg font-semibold capitalize transition-colors ${activeTab === tab ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                  {{ 'games': `Jeux (${games.length})`, 'blogs': `Blogs (${blogs.length})`, 'products': `Produits (${products.length})`, 'social-links': `Réseaux (${socialLinks.length})`, 'ads': 'Publicités', 'settings': 'Paramètres' }[tab]}
+                  {{ 'games': `Jeux (${games.length})`, 'blogs': `Blogs (${blogs.length})`, 'products': `Produits (${products.length})`, 'comments': `Commentaires (${comments.length})`, 'social-links': `Réseaux (${socialLinks.length})`, 'ads': 'Publicités', 'settings': 'Paramètres' }[tab]}
                 </button>
               ))}
             </div>
@@ -289,6 +319,34 @@ export default function AdminPanel() {
                 </div>
                 <div className="flex justify-end"><button onClick={handleSaveSettings} className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-md font-semibold transition-colors">Sauvegarder les Paramètres</button></div>
               </div>
+            ) : activeTab === 'comments' ? (
+                 <div className="bg-gray-800 rounded-lg overflow-hidden">
+                    <div className="p-4"><input type="text" placeholder="Rechercher par auteur, contenu, ou blog..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="px-4 py-2 bg-gray-700 rounded-md w-full md:w-1/2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+                    {loading ? <div className="text-center py-10">Chargement...</div> : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead><tr className="border-b border-gray-700 bg-gray-700/50"><th className="text-left p-3 text-sm font-semibold uppercase">Auteur</th><th className="text-left p-3 text-sm font-semibold uppercase">Commentaire</th><th className="text-left p-3 text-sm font-semibold uppercase">Article de blog</th><th className="text-left p-3 text-sm font-semibold uppercase">Statut</th><th className="text-right p-3 text-sm font-semibold uppercase">Actions</th></tr></thead>
+                            <tbody>
+                              {paginationData.items.map((comment: any) => (
+                                <tr key={comment.id} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
+                                  <td className="p-3 font-medium">{comment.author}</td>
+                                  <td className="p-3 text-sm text-gray-400 max-w-md truncate" title={comment.text}>{comment.text}</td>
+                                  <td className="p-3 text-sm text-gray-400">{comment.blog_title}</td>
+                                  <td className="p-3 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${comment.status === 'approved' ? 'bg-green-600/50 text-green-300' : 'bg-yellow-600/50 text-yellow-300'}`}>{comment.status}</span></td>
+                                  <td className="p-3 text-right">
+                                    {comment.status === 'pending' && <button onClick={() => handleApproveComment(comment.id)} className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm font-semibold mr-2 transition-colors">Approuver</button>}
+                                    <button onClick={() => handleDelete(comment.id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-semibold transition-colors">Supprimer</button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {paginationData.totalPages > 1 && (<div className="flex justify-center items-center gap-4 p-4 border-t border-gray-700"><button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={!paginationData.hasPreviousPage} className="px-4 py-2 bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Précédent</button><span className="text-sm font-medium text-gray-400">Page {currentPage} sur {paginationData.totalPages}</span><button onClick={() => setCurrentPage(p => Math.min(paginationData.totalPages, p + 1))} disabled={!paginationData.hasNextPage} className="px-4 py-2 bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Suivant</button></div>)}
+                      </>
+                    )}
+                  </div>
             ) : (
               <>
                 <div className="flex justify-between items-center mb-4 flex-wrap gap-4">

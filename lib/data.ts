@@ -31,7 +31,7 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
 export async function getCommentsByBlogId(blogId: number): Promise<Comment[]> {
   const result = await query(`
     SELECT id, author, avatar_url AS "avatarUrl", text, date
-    FROM comments WHERE blog_post_id = $1 ORDER BY id DESC
+    FROM comments WHERE blog_post_id = $1 AND status = 'approved' ORDER BY id DESC
   `, [blogId]);
   return result.rows;
 }

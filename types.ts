@@ -32,6 +32,9 @@ export interface Comment {
   avatarUrl: string;
   date: string;
   text: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  blog_post_id?: number;
+  blog_title?: string;
 }
 
 export interface BlogPost {

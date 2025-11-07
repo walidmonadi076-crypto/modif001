@@ -2,10 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getDbClient } from '../../../db';
 import type { Comment } from '../../../types';
 
-// Simple in-memory rate limiter to prevent spam
-const rateLimiter = new Map<string, { count: number; expiry: number }>();
-const MAX_REQUESTS = 3; // Max 3 comments per IP
-const WINDOW_DURATION = 10 * 60 * 1000; // in a 10 minute window
+const RECAPTCHA_SECRET_KEY = '6Lcm1QUsAAAAAO4ClV3H-_pYeUlNPL-AJhRgwoI9';
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,26 +13,14 @@ export default async function handler(
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  // --- Rate Limiting Logic ---
-  const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  const record = rateLimiter.get(ip);
+  const { postId, author, text, recaptchaToken } = req.body;
 
-  if (record && now < record.expiry) {
-    if (record.count >= MAX_REQUESTS) {
-      return res.status(429).json({ error: 'Too many comments. Please try again in a few minutes.' });
-    }
-    rateLimiter.set(ip, { ...record, count: record.count + 1 });
-  } else {
-    // Start a new record for this IP
-    rateLimiter.set(ip, { count: 1, expiry: now + WINDOW_DURATION });
-  }
-  
-  // --- Input Validation & Human Verification ---
-  const { postId, author, text, num1, num2, answer } = req.body;
-
-  if (!postId || !author || !text || !answer || num1 === undefined || num2 === undefined) {
+  // --- Input Validation ---
+  if (!postId || !author || !text) {
     return res.status(400).json({ error: 'Missing required fields.' });
+  }
+  if (!recaptchaToken) {
+    return res.status(400).json({ error: 'Please complete the reCAPTCHA.' });
   }
   if (author.trim().length < 2 || author.trim().length > 50) {
     return res.status(400).json({ error: 'Name must be between 2 and 50 characters.' });
@@ -43,8 +28,27 @@ export default async function handler(
   if (text.trim().length < 10 || text.trim().length > 1000) {
     return res.status(400).json({ error: 'Comment must be between 10 and 1000 characters.' });
   }
-  if (parseInt(answer, 10) !== num1 + num2) {
-      return res.status(400).json({ error: 'Incorrect answer to the human verification question.' });
+
+  // --- reCAPTCHA Verification ---
+  try {
+    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify`;
+    const recaptchaRes = await fetch(verificationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `secret=${RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`,
+    });
+    
+    const recaptchaJson = await recaptchaRes.json();
+    
+    if (!recaptchaJson.success) {
+      console.warn('reCAPTCHA verification failed:', recaptchaJson['error-codes']);
+      return res.status(400).json({ error: 'Failed reCAPTCHA verification. Please try again.' });
+    }
+  } catch (error) {
+    console.error("reCAPTCHA verification request error:", error);
+    return res.status(500).json({ error: 'Error verifying reCAPTCHA.' });
   }
 
   const client = await getDbClient();
@@ -56,24 +60,11 @@ export default async function handler(
     const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     const result = await client.query(
-      `INSERT INTO comments (blog_post_id, author, avatar_url, date, text) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, author, avatar_url AS "avatarUrl", date, text`,
+      `INSERT INTO comments (blog_post_id, author, avatar_url, date, text, status) 
+       VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id, author, avatar_url AS "avatarUrl", date, text`,
       [postId, sanitizedAuthor, avatarUrl, date, sanitizedText]
     );
     const newComment: Comment = result.rows[0];
-
-    // --- On-Demand Revalidation ---
-    // After a successful comment, we trigger a rebuild of the static blog page.
-    try {
-        const postResult = await client.query('SELECT slug FROM blog_posts WHERE id = $1', [postId]);
-        if (postResult.rows.length > 0) {
-            const slug = postResult.rows[0].slug;
-            await res.revalidate(`/blog/${slug}`);
-        }
-    } catch (revalError) {
-        // Log the error but don't fail the request, the standard revalidation will still run.
-        console.error('Error triggering revalidation:', revalError);
-    }
 
     return res.status(201).json(newComment);
   } catch (error) {
