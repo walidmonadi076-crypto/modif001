@@ -1,5 +1,3 @@
-
-
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -18,7 +16,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onMouseEnter, onMouseLeav
   
   const navItems = [
     { href: '/', icon: ICONS.HOME, label: 'Home' },
-    { href: '/blog', icon: ICONS.BLOG, label: 'Blogs' },
+    { href: '/games', icon: ICONS.ACTION, label: 'Games' },
+    { href: '/blog', icon: ICONS.BLOG, label: 'Blog' },
     { href: '/shop', icon: ICONS.STORE, label: 'Shop' },
   ];
 
@@ -30,7 +29,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onMouseEnter, onMouseLeav
     if (path.startsWith('/shop')) {
       return { popularLinks: POPULAR_SHOP_CATEGORIES, parentPath: '/shop' };
     }
-    return { popularLinks: POPULAR_GAME_CATEGORIES, parentPath: '/' };
+    // Default to games for both '/' and '/games'
+    return { popularLinks: POPULAR_GAME_CATEGORIES, parentPath: '/games' };
   }, [router.pathname]);
 
   const isFullyExpanded = isExpanded || isMobileOpen;
@@ -55,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onMouseEnter, onMouseLeav
 
       <ul className="w-full px-4 space-y-2">
         {navItems.map(item => {
-          const isActive = item.href === '/' ? router.pathname === '/' : router.pathname.startsWith(item.href);
+          const isActive = (item.href === '/' && router.pathname === '/') || (item.href !== '/' && router.pathname.startsWith(item.href));
           return (
             <li key={item.href}>
               <Link
@@ -87,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onMouseEnter, onMouseLeav
         <ul className="w-full px-4 space-y-2">
             {popularLinks.map(item => {
                 const href = {
-                  pathname: parentPath === '/' ? '/' : parentPath,
+                  pathname: parentPath,
                   query: { category: item.value },
                 };
                 const isActive = router.pathname === href.pathname && router.query.category === item.value;

@@ -7,7 +7,6 @@ import { PRODUCTS_DATA } from "../../data/products";
 import { isAuthorized } from "./auth/check";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Remplacé par la vérification renforcée incluant le CSRF
   if (!isAuthorized(req)) {
     return res.status(401).json({ error: 'Non autorisé' });
   }
@@ -25,8 +24,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     await client.connect();
-
-    // On utilise une transaction pour s'assurer que tout réussit ou tout échoue
     await client.query('BEGIN');
 
     await client.query("DELETE FROM comments");
@@ -34,68 +31,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await client.query("DELETE FROM games");
     await client.query("DELETE FROM products");
     
-    // Réinitialisation des séquences pour éviter les conflits d'ID
     await client.query("ALTER SEQUENCE comments_id_seq RESTART WITH 1");
     await client.query("ALTER SEQUENCE blog_posts_id_seq RESTART WITH 1");
     await client.query("ALTER SEQUENCE games_id_seq RESTART WITH 1");
     await client.query("ALTER SEQUENCE products_id_seq RESTART WITH 1");
 
-
     for (const game of GAMES_DATA) {
       await client.query(
-        `INSERT INTO games (id, title, image_url, category, tags, theme, description, video_url, download_url, gallery) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [
-          game.id,
-          game.title,
-          game.imageUrl,
-          game.category,
-          game.tags || [],
-          game.theme || null,
-          game.description,
-          game.videoUrl || null,
-          game.downloadUrl,
-          game.gallery,
-        ]
+        `INSERT INTO games (id, slug, title, image_url, category, tags, theme, description, video_url, download_url, gallery) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [game.id, game.slug, game.title, game.imageUrl, game.category, game.tags || [], game.theme || null, game.description, game.videoUrl || null, game.downloadUrl, game.gallery]
       );
     }
 
     for (const blog of BLOGS_DATA) {
       await client.query(
-        `INSERT INTO blog_posts (id, title, summary, image_url, video_url, author, publish_date, rating, affiliate_url, content, category) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [
-          blog.id,
-          blog.title,
-          blog.summary,
-          blog.imageUrl,
-          blog.videoUrl || null,
-          blog.author,
-          blog.publishDate,
-          blog.rating,
-          blog.affiliateUrl,
-          blog.content,
-          blog.category,
-        ]
+        `INSERT INTO blog_posts (id, slug, title, summary, image_url, video_url, author, publish_date, rating, affiliate_url, content, category) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [blog.id, blog.slug, blog.title, blog.summary, blog.imageUrl, blog.videoUrl || null, blog.author, blog.publishDate, blog.rating, blog.affiliateUrl, blog.content, blog.category]
       );
     }
 
     for (const product of PRODUCTS_DATA) {
-      // On s'assure que le prix est un nombre, comme dans l'API admin
       const numericPrice = parseFloat(product.price.replace(/[^0-9.]/g, '')) || 0;
       await client.query(
-        `INSERT INTO products (id, name, image_url, price, url, description, gallery, category) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          product.id,
-          product.name,
-          product.imageUrl,
-          numericPrice,
-          product.url,
-          product.description,
-          product.gallery,
-          product.category,
-        ]
+        `INSERT INTO products (id, slug, name, image_url, price, url, description, gallery, category) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [product.id, product.slug, product.name, product.imageUrl, numericPrice, product.url, product.description, product.gallery, product.category]
       );
     }
 
@@ -104,14 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await client.query(
           `INSERT INTO comments (id, blog_post_id, author, avatar_url, date, text) 
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            comment.id,
-            parseInt(blogId),
-            comment.author,
-            comment.avatarUrl,
-            comment.date,
-            comment.text,
-          ]
+          [comment.id, parseInt(blogId), comment.author, comment.avatarUrl, comment.date, comment.text]
         );
       }
     }

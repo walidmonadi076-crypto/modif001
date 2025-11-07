@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,56 +9,16 @@ import Ad from '../../components/Ad';
 import SEO from '../../components/SEO';
 
 declare global {
-    interface Window {
-        og_load: () => void;
-    }
+    interface Window { og_load: () => void; }
 }
 
-interface GameDetailPageProps {
-    game: Game;
-}
+interface GameDetailPageProps { game: Game; }
 
 const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
     const router = useRouter();
 
-    const handleUnlock = useCallback(() => {
-        if (game) {
-            window.open(game.downloadUrl, '_blank');
-        }
-    }, [game]);
-
-    useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-          if (event.data && event.data.event === 'unlockContent') {
-            handleUnlock();
-          }
-        };
-        window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, [handleUnlock]);
-    
-    useEffect(() => {
-        if (!router.isFallback) {
-            window.scrollTo(0, 0);
-        }
-    }, [router.isFallback]);
-
-    const handleDownloadClick = () => {
-        if (typeof window.og_load === 'function') {
-            window.og_load();
-        } else {
-            console.error("OGAds script not loaded or og_load function not available.");
-            alert("The download service is currently unavailable. Please try again later.");
-        }
-    };
-
-    if (router.isFallback || !game) {
-        return (
-             <div className="text-center p-10">
-                <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <p className="mt-4 text-lg text-gray-300">Loading Game...</p>
-            </div>
-        );
+    if (router.isFallback) {
+        return <div className="text-center p-10">Chargement du jeu...</div>;
     }
 
     const gameSchema = {
@@ -67,17 +27,18 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
         "name": game.title,
         "description": game.description,
         "image": game.imageUrl,
-        "applicationCategory": game.category,
-        "operatingSystem": "PC",
+        "applicationCategory": "Game",
+        "operatingSystem": "Windows, macOS, Linux",
         "genre": game.category,
-        "publisher": {
-            "@type": "Organization",
-            "name": "G2gaming"
-        },
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
+        "keywords": game.tags?.join(', ') || ''
+    };
+    
+    const handleDownloadClick = () => {
+        if (typeof window.og_load === 'function') {
+            window.og_load();
+        } else {
+            console.error("OGAds script not loaded.");
+            window.open(game.downloadUrl, '_blank');
         }
     };
 
@@ -92,7 +53,7 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
             />
             <div className="max-w-7xl mx-auto">
                 <div className="mb-4">
-                    <Link href="/" className="text-sm text-purple-400 hover:underline">&lt; Back to Games</Link>
+                    <Link href="/games" className="text-sm text-purple-400 hover:underline">&lt; Back to Games</Link>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
@@ -104,7 +65,7 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
                                 <h1 className="text-4xl font-extrabold text-white mb-3">{game.title}</h1>
                                 <div className="flex flex-wrap gap-2 mb-6">{game.tags?.map(tag => <span key={tag} className="text-xs font-semibold bg-gray-700 text-gray-300 px-2.5 py-1 rounded-full">{tag}</span>)}</div>
                                 <p className="text-gray-300 leading-relaxed">{game.description}</p>
-                                <button onClick={handleDownloadClick} className="mt-8 inline-block w-full sm:w-auto text-center bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-green-600 transition-colors duration-300 transform hover:scale-105">Download Now</button>
+                                <button onClick={handleDownloadClick} className="mt-8 inline-block w-full sm:w-auto text-center bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-green-600 transition-colors">Download Now</button>
                             </div>
                         </div>
                         <div className="mt-8 flex justify-center">
@@ -135,14 +96,15 @@ export const getStaticPaths: GetStaticPaths = async () => {
 };
 
 export const getStaticProps: GetStaticProps = async (context) => {
-    const { slug } = context.params!;
-    const game = await getGameBySlug(slug as string);
-    if (!game) {
-        return { notFound: true };
-    }
+    const slug = context.params?.slug as string;
+    if (!slug) return { notFound: true };
+
+    const game = await getGameBySlug(slug);
+    if (!game) return { notFound: true };
+
     return {
         props: { game },
-        revalidate: 60, // In seconds
+        revalidate: 60,
     };
 };
 

@@ -4,26 +4,25 @@ import { isAuthorized } from '../auth/check';
 import { slugify } from '../../../lib/slugify';
 
 async function generateUniqueSlug(client: any, title: string, currentId: number | null = null): Promise<string> {
-  let slug = slugify(title);
+  let baseSlug = slugify(title);
+  let slug = baseSlug;
   let isUnique = false;
   let counter = 1;
 
   while (!isUnique) {
-    let query = 'SELECT id FROM blog_posts WHERE slug = $1';
-    const params: any[] = [slug];
+    const query = currentId 
+      ? 'SELECT id FROM blog_posts WHERE slug = $1 AND id != $2'
+      : 'SELECT id FROM blog_posts WHERE slug = $1';
     
-    if (currentId) {
-      query += ' AND id != $2';
-      params.push(currentId);
-    }
-
+    const params = currentId ? [slug, currentId] : [slug];
+    
     const { rows } = await client.query(query, params);
-    
+
     if (rows.length === 0) {
       isUnique = true;
     } else {
+      slug = `${baseSlug}-${counter}`;
       counter++;
-      slug = `${slugify(title)}-${counter}`;
     }
   }
   return slug;
@@ -37,38 +36,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const client = await getDbClient();
 
   try {
-    const { id, title, summary, imageUrl, videoUrl, author, publishDate, rating, affiliateUrl, content, category } = req.body;
-    
-    if (req.method === 'POST' || req.method === 'PUT') {
-        if (!title || typeof title !== 'string' || title.trim() === '') {
-            return res.status(400).json({ error: 'Le champ "Titre" est obligatoire.' });
-        }
-        // ... (autres validations)
-    }
-    
-    const numericRating = parseFloat(rating) || 0;
-    const safeVideoUrl = videoUrl || null;
-    const safeAffiliateUrl = affiliateUrl || null;
-    const safePublishDate = publishDate || new Date().toISOString().split('T')[0];
-
-
     if (req.method === 'POST') {
+      const { title, summary, imageUrl, videoUrl, author, publishDate, rating, affiliateUrl, content, category } = req.body;
+      if (!title) return res.status(400).json({ error: 'Le champ "Titre" est obligatoire.' });
+      
       const slug = await generateUniqueSlug(client, title);
       const result = await client.query(
         `INSERT INTO blog_posts (title, slug, summary, image_url, video_url, author, publish_date, rating, affiliate_url, content, category) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-        [title, slug, summary, imageUrl, safeVideoUrl, author, safePublishDate, numericRating, safeAffiliateUrl, content, category]
+        [title, slug, summary, imageUrl, videoUrl || null, author, publishDate || new Date().toISOString().split('T')[0], parseFloat(rating) || 0, affiliateUrl || null, content, category]
       );
-      
       res.status(201).json(result.rows[0]);
 
     } else if (req.method === 'PUT') {
+      const { id, title, summary, imageUrl, videoUrl, author, publishDate, rating, affiliateUrl, content, category } = req.body;
+      if (!title) return res.status(400).json({ error: 'Le champ "Titre" est obligatoire.' });
+
       const slug = await generateUniqueSlug(client, title, id);
       const result = await client.query(
         `UPDATE blog_posts 
          SET title = $1, slug = $2, summary = $3, image_url = $4, video_url = $5, author = $6, publish_date = $7, rating = $8, affiliate_url = $9, content = $10, category = $11 
          WHERE id = $12 RETURNING *`,
-        [title, slug, summary, imageUrl, safeVideoUrl, author, safePublishDate, numericRating, safeAffiliateUrl, content, category, id]
+        [title, slug, summary, imageUrl, videoUrl || null, author, publishDate || new Date().toISOString().split('T')[0], parseFloat(rating) || 0, affiliateUrl || null, content, category, id]
       );
       
       if (result.rows.length === 0) {
@@ -79,8 +68,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     } else if (req.method === 'DELETE') {
       const { id } = req.query;
-      await client.query('DELETE FROM blog_posts WHERE id = $1', [id]);
-      res.status(200).json({ message: 'Blog post deleted successfully' });
+      const result = await client.query('DELETE FROM blog_posts WHERE id = $1 RETURNING id', [id]);
+      if (result.rows.length === 0) {
+        res.status(404).json({ message: 'Blog post not found' });
+      } else {
+        res.status(200).json({ message: 'Blog post deleted successfully' });
+      }
     } else {
       res.setHeader('Allow', ['POST', 'PUT', 'DELETE']);
       res.status(405).json({ message: 'Method not allowed' });

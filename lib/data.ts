@@ -7,8 +7,9 @@ import type { BlogPost, Comment, Product, Game } from '../types';
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
   const result = await query(`
     SELECT 
-      id, slug, title, summary, image_url AS "imageUrl", video_url AS "videoUrl", author,
-      publish_date AS "publishDate", rating::float, affiliate_url AS "affiliateUrl", content, category
+      id, slug, title, summary, image_url AS "imageUrl", video_url AS "videoUrl",
+      author, publish_date AS "publishDate", rating::float, affiliate_url AS "affiliateUrl",
+      content, category
     FROM blog_posts ORDER BY id ASC
   `);
   return result.rows;
@@ -17,8 +18,9 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
   const result = await query(`
     SELECT 
-      id, slug, title, summary, image_url AS "imageUrl", video_url AS "videoUrl", author,
-      publish_date AS "publishDate", rating::float, affiliate_url AS "affiliateUrl", content, category
+      id, slug, title, summary, image_url AS "imageUrl", video_url AS "videoUrl",
+      author, publish_date AS "publishDate", rating::float, affiliate_url AS "affiliateUrl",
+      content, category
     FROM blog_posts WHERE slug = $1
   `, [slug]);
   return result.rows.length > 0 ? result.rows[0] : null;

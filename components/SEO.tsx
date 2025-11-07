@@ -6,7 +6,7 @@ interface SEOProps {
   image?: string;
   url?: string;
   keywords?: string[];
-  schema?: object;
+  schema?: Record<string, any>;
 }
 
 export default function SEO({
@@ -15,10 +15,10 @@ export default function SEO({
   image = 'https://picsum.photos/seed/ogimage/1200/630',
   url = '',
   keywords = ['G2gaming', 'download games', 'free games', 'pc games', 'gaming guides', 'gaming tips', 'gaming techniques', 'gaming gear', 'gaming accessories', 'gaming products'],
-  schema,
+  schema
 }: SEOProps) {
   const fullTitle = title.includes('G2gaming') ? title : `${title} | G2gaming`;
-  const fullUrl = url ? `https://g2gaming.vercel.app${url}` : 'https://g2gaming.vercel.app';
+  const fullUrl = url ? `https://yoursite.com${url}` : 'https://yoursite.com';
 
   return (
     <Head>

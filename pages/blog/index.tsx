@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -6,21 +5,7 @@ import { useRouter } from 'next/router';
 import type { GetStaticProps } from 'next';
 import type { BlogPost } from '../../types';
 import { getAllBlogPosts } from '../../lib/data';
-
-const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
-    const numericRating = Number(rating || 0);
-    const fullStars = Math.floor(numericRating);
-    const halfStar = numericRating % 1 !== 0;
-    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-    return (
-        <div className="flex items-center text-yellow-400">
-            {[...Array(fullStars)].map((_, i) => <svg key={`full-${i}`} className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>)}
-            {halfStar && <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545zM10 12.83V2.5l1.837 3.718 4.108.597-2.973 2.898.702 4.09L10 12.83z"/></svg>}
-            {[...Array(emptyStars)].map((_, i) => <svg key={`empty-${i}`} className="w-4 h-4 fill-current text-gray-600" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>)}
-            <span className="ml-2 text-sm text-gray-400">{numericRating.toFixed(1)}</span>
-        </div>
-    );
-};
+import StarRating from '../../components/StarRating';
 
 const BlogCard: React.FC<{ post: BlogPost }> = ({ post }) => (
     <Link href={`/blog/${post.slug}`} className="bg-gray-800 rounded-2xl overflow-hidden group shadow-lg transform hover:-translate-y-1 transition-transform duration-200 flex flex-col">
@@ -88,7 +73,7 @@ const BlogsPage: React.FC<BlogsPageProps> = ({ searchQuery, posts }) => {
     return (
         <div>
             <h1 className="text-4xl font-bold mb-4">
-                {areFiltersActive ? `Results (${filteredPosts.length})` : 'Affiliate Blogs & Reviews'}
+                {areFiltersActive ? `Results (${filteredPosts.length})` : 'Blog, Guides & Reviews'}
             </h1>
             
             <div className="flex flex-wrap gap-2 items-center mb-8">

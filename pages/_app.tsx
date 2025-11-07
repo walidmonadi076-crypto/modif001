@@ -42,12 +42,10 @@ function MyApp({ Component, pageProps }: AppProps) {
     searchActive,
   };
   
-  // Si la page est dans la section admin, on affiche uniquement le composant
   if (isAdminPage) {
     return <Component {...pageProps} />;
   }
 
-  // Pour toutes les autres pages, on affiche la mise en page standard
   return (
     <AdProvider>
       <div className={`bg-gray-900 text-white min-h-screen flex ${inter.variable} font-sans`}>
