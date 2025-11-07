@@ -19,31 +19,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     if (req.method === 'POST') {
-      const { ogads_script_src: rawScript } = req.body;
-      if (typeof rawScript !== 'string') {
+      const { ogads_script_src: rawInput } = req.body;
+      if (typeof rawInput !== 'string') {
         return res.status(400).json({ error: 'Le champ ogads_script_src est invalide.' });
       }
 
-      let finalSrc = rawScript.trim();
+      const trimmedInput = rawInput.trim();
+      let finalSrc = '';
 
-      // If it looks like a script tag, try to extract the src
-      if (finalSrc.startsWith('<script')) {
-        const srcRegex = /src="([^"]+)"/;
-        const match = finalSrc.match(srcRegex);
-        if (match && match[1]) {
-          finalSrc = match[1];
-        } else {
-          // It looked like a script tag but we couldn't find a src.
-          return res.status(400).json({ error: 'Impossible d\'extraire l\'URL du script. Assurez-vous que le code est valide et contient un attribut src="...".' });
-        }
+      // Regex to find src attribute specifically in a <script> tag, anywhere in the string
+      const srcRegex = /<script[^>]*src="([^"]+)"/i;
+      const match = trimmedInput.match(srcRegex);
+
+      if (match && match[1]) {
+        // We found a script tag with a src, let's use that.
+        finalSrc = match[1];
+      } else {
+        // No script tag found, maybe the user pasted the URL directly.
+        finalSrc = trimmedInput;
       }
 
-      // Basic validation that it's a valid URL now, unless it's an empty string
+      // Now, validate if finalSrc is a valid URL (unless it's empty, which is allowed)
       if (finalSrc) {
         try {
           new URL(finalSrc);
         } catch (_) {
-          return res.status(400).json({ error: `L'URL extraite ou fournie est invalide: ${finalSrc}` });
+          // If validation fails, it means the input was neither a valid script tag with src, nor a valid URL.
+          return res.status(400).json({ error: `Le code fourni est invalide. Assurez-vous de coller le code <script> complet ou une URL valide.` });
         }
       }
       
