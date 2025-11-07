@@ -20,6 +20,7 @@ interface GameDetailPageProps { game: Game; }
 const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
     const router = useRouter();
     const [isUnlocked, setIsUnlocked] = useState(false);
+    const [isOgadsReady, setIsOgadsReady] = useState(false);
 
     useEffect(() => {
         // Define the function that OGAds will call upon successful completion of an offer.
@@ -29,14 +30,30 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
         };
 
         // Attach the function to the window object to make it globally accessible for the OGAds script.
-        // This function name ('onLockerUnlock') should be configured in your OGAds locker settings.
         window.onLockerUnlock = handleUnlock;
 
         // Clean up the global function when the component unmounts to avoid memory leaks.
         return () => {
             delete window.onLockerUnlock;
         };
-    }, []); // The empty dependency array ensures this effect runs only once on mount.
+    }, []);
+
+    // Effect to check for the OGAds script and update readiness state.
+    useEffect(() => {
+        if (typeof window.og_load === 'function') {
+            setIsOgadsReady(true);
+            return;
+        }
+        
+        const intervalId = setInterval(() => {
+            if (typeof window.og_load === 'function') {
+                setIsOgadsReady(true);
+                clearInterval(intervalId);
+            }
+        }, 200); // Poll every 200ms
+
+        return () => clearInterval(intervalId); // Cleanup on unmount
+    }, []);
 
 
     if (router.isFallback) {
@@ -57,7 +74,7 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
     
     // This function is called when the user clicks the initial "Verify" button.
     const handleVerificationClick = () => {
-        if (typeof window.og_load === 'function') {
+        if (isOgadsReady && typeof window.og_load === 'function') {
             window.og_load(); // Triggers the OGAds content locker.
         } else {
             console.error("OGAds script (og_load) is not available.");
@@ -93,10 +110,11 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
                                 <div className="mt-8">
                                     {!isUnlocked ? (
                                         <button 
-                                            onClick={handleVerificationClick} 
-                                            className="inline-block w-full sm:w-auto text-center bg-purple-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-purple-700 transition-colors"
+                                            onClick={handleVerificationClick}
+                                            disabled={!isOgadsReady}
+                                            className="inline-block w-full sm:w-auto text-center bg-purple-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-purple-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
                                         >
-                                            Verify & Unlock Download
+                                            {isOgadsReady ? 'Verify & Unlock Download' : 'Initialisation...'}
                                         </button>
                                     ) : (
                                         <a 
