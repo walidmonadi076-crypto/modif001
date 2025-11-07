@@ -11,15 +11,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     if (req.method === 'GET') {
-      const result = await client.query(`
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string || '';
+      const offset = (page - 1) * limit;
+
+      let whereClause = '';
+      const queryParams: any[] = [];
+      if (search) {
+        queryParams.push(`%${search}%`);
+        whereClause = `WHERE c.author ILIKE $1 OR c.text ILIKE $1 OR c.email ILIKE $1`;
+      }
+      
+      const totalResult = await client.query(`
+        SELECT COUNT(*) 
+        FROM comments c 
+        ${whereClause}`, 
+      queryParams);
+      const totalItems = parseInt(totalResult.rows[0].count, 10);
+      const totalPages = Math.ceil(totalItems / limit);
+
+      queryParams.push(limit, offset);
+      const itemsResult = await client.query(`
         SELECT 
           c.id, c.author, c.text, c.email, c.phone, c.status, c.blog_post_id,
           b.title AS blog_title
         FROM comments c
         LEFT JOIN blog_posts b ON c.blog_post_id = b.id
+        ${whereClause}
         ORDER BY c.id DESC
-      `);
-      return res.status(200).json(result.rows);
+        LIMIT $${queryParams.length-1} OFFSET $${queryParams.length}
+      `, queryParams);
+
+      return res.status(200).json({
+        items: itemsResult.rows,
+        pagination: { totalItems, totalPages, currentPage: page, itemsPerPage: limit }
+      });
     }
     
     if (req.method === 'PUT') { // Approve a comment
@@ -43,7 +70,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       await client.query('COMMIT');
       
-      // Trigger revalidation after committing the transaction
       if (postResult.rows.length > 0) {
         const slug = postResult.rows[0].slug;
         try {

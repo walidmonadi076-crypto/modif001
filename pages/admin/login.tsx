@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import type { Game, BlogPost, Product, SocialLink, Ad, Comment } from '../../types';
 import AdminDashboard from '../../components/AdminDashboard';
-import { paginate } from '../../lib/pagination';
 import AdminForm from '../../components/AdminForm';
 import ToastContainer from '../../components/ToastContainer';
 import type { ToastData, ToastType } from '../../components/Toast';
+import { useDebounce } from '../../hooks/useDebounce';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -14,29 +14,47 @@ function getCookie(name: string): string | null {
   return match ? match[2] : null;
 }
 
+// Fix: Define helper types that match the props expected by the AdminForm component.
+// This resolves type conflicts between this component's broader 'Item' and 'TabType'
+// and AdminForm's more specific 'Item' and 'ItemType'.
+type FormItem = Game | BlogPost | Product | SocialLink;
+type FormItemType = 'games' | 'blogs' | 'products' | 'social-links';
+
 const AD_PLACEMENTS = ['game_vertical', 'game_horizontal', 'shop_square', 'blog_skyscraper_left', 'blog_skyscraper_right'];
+
+type TabType = 'games' | 'blogs' | 'products' | 'social-links' | 'comments' | 'ads' | 'settings';
+
+type Item = Game | BlogPost | Product | SocialLink | Comment;
+
+interface PaginationState {
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  itemsPerPage: number;
+}
 
 export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [activeTab, setActiveTab] = useState<'games' | 'blogs' | 'products' | 'social-links' | 'comments' | 'ads' | 'settings'>('games');
+  const [activeTab, setActiveTab] = useState<TabType>('games');
   
-  const [games, setGames] = useState<Game[]>([]);
-  const [blogs, setBlogs] = useState<BlogPost[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [stats, setStats] = useState(null);
   const [ads, setAds] = useState<Record<string, string>>({});
   const [ogadsScript, setOgadsScript] = useState('');
   
   const [loading, setLoading] = useState(true);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [showForm, setShowForm] = useState(false);
+  
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [pagination, setPagination] = useState<PaginationState>({ totalItems: 0, totalPages: 1, currentPage: 1, itemsPerPage: 20 });
+  
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
   const addToast = useCallback((message: string, type: ToastType) => {
@@ -48,65 +66,49 @@ export default function AdminPanel() {
     setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
   }, []);
 
-  const currentData = useMemo(() => {
-    switch (activeTab) {
-      case 'games': return games;
-      case 'blogs': return blogs;
-      case 'products': return products;
-      case 'social-links': return socialLinks;
-      case 'comments': return comments;
-      default: return [];
-    }
-  }, [activeTab, games, blogs, products, socialLinks, comments]);
-
-  const filteredData = useMemo(() => currentData.filter((item: any) => {
-    const query = searchQuery.toLowerCase();
-    return (item.title && item.title.toLowerCase().includes(query)) ||
-           (item.name && item.name.toLowerCase().includes(query)) ||
-           (item.author && item.author.toLowerCase().includes(query)) ||
-           (item.text && item.text.toLowerCase().includes(query));
-  }), [currentData, searchQuery]);
-
-  const paginationData = useMemo(() => paginate(filteredData, currentPage, itemsPerPage), [filteredData, currentPage, itemsPerPage]);
-
   const handleLogout = useCallback(async () => {
     await fetch('/api/auth/logout');
     setIsAuthenticated(false);
   }, []);
 
-  const fetchAllData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [gamesRes, blogsRes, productsRes, socialLinksRes, commentsRes, adsRes, settingsRes] = await Promise.all([
-        fetch('/api/admin/games'),
-        fetch('/api/admin/blogs'),
-        fetch('/api/admin/products'),
-        fetch('/api/admin/social-links'),
-        fetch('/api/admin/comments'),
-        fetch('/api/admin/ads'),
-        fetch('/api/admin/settings'),
-      ]);
-      
-      const responses = [gamesRes, blogsRes, productsRes, socialLinksRes, commentsRes, adsRes, settingsRes];
-      if (responses.some(res => !res.ok)) throw new Error('Failed to fetch initial data');
+  const fetchDataForTab = useCallback(async (tab: TabType, page: number, search: string) => {
+      if (['ads', 'settings'].includes(tab)) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/admin/${tab}?page=${page}&search=${encodeURIComponent(search)}&limit=${pagination.itemsPerPage}`);
+        if (!res.ok) throw new Error('Failed to fetch data');
+        const data = await res.json();
+        setItems(data.items);
+        setPagination(data.pagination);
+      } catch (error) {
+        console.error(`Error fetching ${tab}:`, error);
+        addToast(`Erreur lors du chargement de ${tab}.`, 'error');
+      } finally {
+        setLoading(false);
+      }
+  }, [addToast, pagination.itemsPerPage]);
+  
+  const fetchInitialAdminData = useCallback(async () => {
+      setLoading(true);
+      try {
+        const [statsRes, adsRes, settingsRes] = await Promise.all([
+          fetch('/api/admin/stats'),
+          fetch('/api/admin/ads'),
+          fetch('/api/admin/settings'),
+        ]);
 
-      const [gamesData, blogsData, productsData, socialLinksData, commentsData, adsData, settingsData] = await Promise.all(responses.map(res => res.json()));
+        if (!statsRes.ok || !adsRes.ok || !settingsRes.ok) throw new Error('Failed to fetch initial admin data');
 
-      setGames(gamesData);
-      setBlogs(blogsData);
-      setProducts(productsData);
-      setSocialLinks(socialLinksData);
-      setComments(commentsData);
-
-      const adsObject = adsData.reduce((acc: Record<string, string>, ad: Ad) => ({ ...acc, [ad.placement]: ad.code || '' }), {});
-      setAds(adsObject);
-      setOgadsScript(settingsData.ogads_script_src || '');
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      addToast('Erreur lors du chargement des données.', 'error');
-    } finally {
-      setLoading(false);
-    }
+        const [statsData, adsData, settingsData] = await Promise.all([statsRes.json(), adsRes.json(), settingsRes.json()]);
+        
+        setStats(statsData);
+        const adsObject = adsData.reduce((acc: Record<string, string>, ad: Ad) => ({ ...acc, [ad.placement]: ad.code || '' }), {});
+        setAds(adsObject);
+        setOgadsScript(settingsData.ogads_script_src || '');
+      } catch (error) {
+        console.error('Error fetching initial admin data:', error);
+        addToast('Erreur de chargement des données initiales.', 'error');
+      }
   }, [addToast]);
 
   useEffect(() => {
@@ -124,9 +126,21 @@ export default function AdminPanel() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) fetchAllData();
-  }, [isAuthenticated, fetchAllData]);
+    if (isAuthenticated) {
+        fetchInitialAdminData();
+    }
+  }, [isAuthenticated, fetchInitialAdminData]);
   
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchDataForTab(activeTab, currentPage, debouncedSearchQuery);
+    }
+  }, [isAuthenticated, activeTab, currentPage, debouncedSearchQuery, fetchDataForTab]);
+
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [activeTab, debouncedSearchQuery]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -148,6 +162,12 @@ export default function AdminPanel() {
     }
   };
 
+  const refreshCurrentTab = useCallback(() => {
+    fetchDataForTab(activeTab, currentPage, debouncedSearchQuery);
+    fetchInitialAdminData();
+  }, [activeTab, currentPage, debouncedSearchQuery, fetchDataForTab, fetchInitialAdminData]);
+
+
   const handleDelete = async (id: number) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément?')) return;
     const csrfToken = getCookie('csrf_token');
@@ -156,7 +176,7 @@ export default function AdminPanel() {
       const res = await fetch(`/api/admin/${activeTab}?id=${id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken } });
       if (res.ok) {
         addToast('Élément supprimé avec succès!', 'success');
-        fetchAllData();
+        refreshCurrentTab();
       } else {
         const error = await res.json();
         addToast(`Erreur: ${error.error || 'La suppression a échoué'}`, 'error');
@@ -177,13 +197,13 @@ export default function AdminPanel() {
         });
         if (res.ok) {
             addToast('Commentaire approuvé!', 'success');
-            fetchAllData();
+            refreshCurrentTab();
         } else {
             const error = await res.json();
-            addToast(`Erreur: ${error.message || 'L\'approbation a échoué'}`, 'error');
+            addToast(`Erreur: ${error.message || 'L\\'approbation a échoué'}`, 'error');
         }
     } catch (error) {
-        addToast('Erreur lors de l\'approbation.', 'error');
+        addToast('Erreur lors de l\\'approbation.', 'error');
     }
   };
 
@@ -202,7 +222,7 @@ export default function AdminPanel() {
         addToast(editingItem ? 'Élément modifié avec succès!' : 'Élément créé avec succès!', 'success');
         setShowForm(false);
         setEditingItem(null);
-        fetchAllData();
+        refreshCurrentTab();
       } else {
         const error = await res.json();
         addToast(`Erreur: ${error.error || 'La sauvegarde a échoué'}`, 'error');
@@ -274,12 +294,14 @@ export default function AdminPanel() {
     );
   }
 
-  // Le reste du panneau d'administration
   return (
     <div className="min-h-screen bg-gray-900 text-white">
         <Head><title>Admin Panel - G2gaming</title></Head>
         <ToastContainer toasts={toasts} onClose={removeToast} />
-        {showForm && activeTab !== 'comments' && <AdminForm item={editingItem} type={activeTab as any} onClose={() => setShowForm(false)} onSubmit={handleSubmit} />}
+        {/* Fix: Cast `editingItem` and `activeTab` to the specific types required by AdminForm.
+            The component's logic ensures these casts are safe because the form is only
+            rendered for tabs and items that are compatible with AdminForm's props. */}
+        {showForm && activeTab !== 'comments' && <AdminForm item={editingItem as FormItem | null} type={activeTab as FormItemType} onClose={() => setShowForm(false)} onSubmit={handleSubmit} />}
 
         <div className="container mx-auto px-4 py-8">
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
@@ -289,12 +311,12 @@ export default function AdminPanel() {
                     <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md font-semibold transition-colors">Déconnexion</button>
                 </div>
             </div>
-            <AdminDashboard games={games} blogs={blogs} products={products} />
+            <AdminDashboard stats={stats} />
             
             <div className="flex gap-4 mb-6 flex-wrap">
-              {['games', 'blogs', 'products', 'social-links', 'comments', 'ads', 'settings'].map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-6 py-3 rounded-lg font-semibold capitalize transition-colors ${activeTab === tab ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                  {{ 'games': `Jeux (${games.length})`, 'blogs': `Blogs (${blogs.length})`, 'products': `Produits (${products.length})`, 'social-links': `Réseaux (${socialLinks.length})`, 'comments': `Commentaires (${comments.length})`, 'ads': 'Publicités', 'settings': 'Paramètres' }[tab]}
+              {(['games', 'blogs', 'products', 'social-links', 'comments', 'ads', 'settings'] as TabType[]).map((tab) => (
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 rounded-lg font-semibold capitalize transition-colors ${activeTab === tab ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                  {tab}
                 </button>
               ))}
             </div>
@@ -322,33 +344,11 @@ export default function AdminPanel() {
                 </div>
                 <div className="flex justify-end"><button onClick={handleSaveSettings} className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-md font-semibold transition-colors">Sauvegarder les Paramètres</button></div>
               </div>
-            ) : activeTab === 'comments' ? (
-                 <div className="bg-gray-800 rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead><tr className="border-b border-gray-700 bg-gray-700/50"><th className="text-left p-3 text-sm font-semibold uppercase">Auteur</th><th className="text-left p-3 text-sm font-semibold uppercase">Commentaire</th><th className="text-left p-3 text-sm font-semibold uppercase">Article</th><th className="text-left p-3 text-sm font-semibold uppercase">Status</th><th className="text-right p-3 text-sm font-semibold uppercase">Actions</th></tr></thead>
-                      <tbody>
-                        {(paginationData.items as Comment[]).map((comment) => (
-                          <tr key={comment.id} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
-                            <td className="p-3 font-medium">{comment.author}<br/><span className="text-xs text-gray-400">{comment.email}</span></td>
-                            <td className="p-3 text-sm text-gray-300 max-w-sm truncate">{comment.text}</td>
-                            <td className="p-3 text-sm text-gray-400 truncate max-w-xs">{comment.blog_title}</td>
-                            <td className="p-3 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${comment.status === 'approved' ? 'bg-green-600/30 text-green-300' : 'bg-yellow-600/30 text-yellow-300'}`}>{comment.status}</span></td>
-                            <td className="p-3 text-right">
-                              {comment.status === 'pending' && <button onClick={() => handleApproveComment(comment.id)} className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm font-semibold mr-2 transition-colors">Approuver</button>}
-                              <button onClick={() => handleDelete(comment.id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-semibold transition-colors">Supprimer</button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
             ) : (
               <>
                 <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
                   <input type="text" placeholder={`Rechercher dans ${activeTab}...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="px-4 py-2 bg-gray-700 rounded-md w-full md:w-1/2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                  <button onClick={() => { setEditingItem(null); setShowForm(true); }} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md font-semibold capitalize transition-colors">Ajouter {activeTab.slice(0, -1)}</button>
+                  {activeTab !== 'comments' && <button onClick={() => { setEditingItem(null); setShowForm(true); }} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md font-semibold capitalize transition-colors">Ajouter {activeTab.slice(0, -1)}</button>}
                 </div>
 
                 <div className="bg-gray-800 rounded-lg overflow-hidden">
@@ -356,27 +356,49 @@ export default function AdminPanel() {
                     <>
                       <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead><tr className="border-b border-gray-700 bg-gray-700/50"><th className="text-left p-3 text-sm font-semibold uppercase">ID</th><th className="text-left p-3 text-sm font-semibold uppercase">Titre/Nom</th><th className="text-left p-3 text-sm font-semibold uppercase">Catégorie/URL</th><th className="text-left p-3 text-sm font-semibold uppercase">Image/Icône</th><th className="text-right p-3 text-sm font-semibold uppercase">Actions</th></tr></thead>
-                          <tbody>
-                            {paginationData.items.map((item: any) => (
-                              <tr key={item.id} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
-                                <td className="p-3 text-sm text-gray-400">{item.id}</td>
-                                <td className="p-3 font-medium">{item.title || item.name}</td>
-                                <td className="p-3 text-sm text-gray-400 truncate max-w-xs">{activeTab === 'social-links' ? item.url : item.category}</td>
-                                <td className="p-3">
-                                  {activeTab === 'social-links' ? <span className="w-8 h-8 flex items-center justify-center bg-gray-700 rounded text-white" dangerouslySetInnerHTML={{ __html: item.icon_svg }} /> : <Image src={item.imageUrl} alt={item.title || item.name} width={64} height={40} className="object-cover rounded" />}
-                                </td>
-                                <td className="p-3 text-right"><button onClick={() => { setEditingItem(item); setShowForm(true); }} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-semibold mr-2 transition-colors">Modifier</button><button onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-semibold transition-colors">Supprimer</button></td>
-                              </tr>
-                            ))}
-                          </tbody>
+                          {activeTab === 'comments' ? (
+                            <>
+                            <thead><tr className="border-b border-gray-700 bg-gray-700/50"><th className="text-left p-3 text-sm font-semibold uppercase">Auteur</th><th className="text-left p-3 text-sm font-semibold uppercase">Commentaire</th><th className="text-left p-3 text-sm font-semibold uppercase">Article</th><th className="text-left p-3 text-sm font-semibold uppercase">Status</th><th className="text-right p-3 text-sm font-semibold uppercase">Actions</th></tr></thead>
+                            <tbody>
+                              {(items as Comment[]).map((comment) => (
+                                <tr key={comment.id} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
+                                  <td className="p-3 font-medium">{comment.author}<br/><span className="text-xs text-gray-400">{comment.email}</span></td>
+                                  <td className="p-3 text-sm text-gray-300 max-w-sm truncate">{comment.text}</td>
+                                  <td className="p-3 text-sm text-gray-400 truncate max-w-xs">{comment.blog_title}</td>
+                                  <td className="p-3 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${comment.status === 'approved' ? 'bg-green-600/30 text-green-300' : 'bg-yellow-600/30 text-yellow-300'}`}>{comment.status}</span></td>
+                                  <td className="p-3 text-right">
+                                    {comment.status === 'pending' && <button onClick={() => handleApproveComment(comment.id)} className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm font-semibold mr-2 transition-colors">Approuver</button>}
+                                    <button onClick={() => handleDelete(comment.id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-semibold transition-colors">Supprimer</button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            </>
+                          ) : (
+                            <>
+                            <thead><tr className="border-b border-gray-700 bg-gray-700/50"><th className="text-left p-3 text-sm font-semibold uppercase">ID</th><th className="text-left p-3 text-sm font-semibold uppercase">Titre/Nom</th><th className="text-left p-3 text-sm font-semibold uppercase">Catégorie/URL</th><th className="text-left p-3 text-sm font-semibold uppercase">Image/Icône</th><th className="text-right p-3 text-sm font-semibold uppercase">Actions</th></tr></thead>
+                            <tbody>
+                            {items.map((item: any) => (
+                                <tr key={item.id} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
+                                  <td className="p-3 text-sm text-gray-400">{item.id}</td>
+                                  <td className="p-3 font-medium">{item.title || item.name}</td>
+                                  <td className="p-3 text-sm text-gray-400 truncate max-w-xs">{activeTab === 'social-links' ? item.url : item.category}</td>
+                                  <td className="p-3">
+                                    {activeTab === 'social-links' ? <span className="w-8 h-8 flex items-center justify-center bg-gray-700 rounded text-white" dangerouslySetInnerHTML={{ __html: item.icon_svg }} /> : <Image src={item.imageUrl} alt={item.title || item.name} width={64} height={40} className="object-cover rounded" />}
+                                  </td>
+                                  <td className="p-3 text-right"><button onClick={() => { setEditingItem(item); setShowForm(true); }} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-semibold mr-2 transition-colors">Modifier</button><button onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-semibold transition-colors">Supprimer</button></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            </>
+                          )}
                         </table>
                       </div>
-                      {paginationData.totalPages > 1 && (
+                      {pagination.totalPages > 1 && (
                         <div className="flex justify-center items-center gap-4 p-4 border-t border-gray-700">
-                          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={!paginationData.hasPreviousPage} className="px-4 py-2 bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Précédent</button>
-                          <span className="text-sm font-medium text-gray-400">Page {currentPage} sur {paginationData.totalPages}</span>
-                          <button onClick={() => setCurrentPage(p => Math.min(paginationData.totalPages, p + 1))} disabled={!paginationData.hasNextPage} className="px-4 py-2 bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Suivant</button>
+                          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1} className="px-4 py-2 bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Précédent</button>
+                          <span className="text-sm font-medium text-gray-400">Page {currentPage} sur {pagination.totalPages}</span>
+                          <button onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))} disabled={currentPage >= pagination.totalPages} className="px-4 py-2 bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Suivant</button>
                         </div>
                       )}
                     </>

@@ -17,8 +17,14 @@ export default async function handler(
   if (!recaptchaToken) {
     return res.status(400).json({ error: 'Please complete the reCAPTCHA.' });
   }
+  
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secretKey) {
+    console.error('RECAPTCHA_SECRET_KEY is not set in environment variables.');
+    return res.status(500).json({ error: 'Server configuration error.' });
+  }
+
   try {
-    const secretKey = '6Lcm1QUsAAAAAO4ClV3H-_pYeUlNPL-AJhRgwoI9';
     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify`;
     const response = await fetch(verificationUrl, {
       method: 'POST',
@@ -62,7 +68,6 @@ export default async function handler(
     );
     const newComment: Comment = result.rows[0];
     
-    // La revalidation se fera maintenant via l'API d'administration après approbation
     return res.status(201).json(newComment);
   } catch (error) {
     console.error("API Error in /api/comments:", error);

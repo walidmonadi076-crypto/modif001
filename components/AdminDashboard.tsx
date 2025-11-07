@@ -1,32 +1,30 @@
 import { useEffect, useState } from 'react';
-import type { Game, BlogPost, Product } from '../types';
 
-interface AdminDashboardProps {
-  games: Game[];
-  blogs: BlogPost[];
-  products: Product[];
+// Nouvelle interface pour les statistiques, découplée des données complètes
+interface AdminStats {
+  totalGames: number;
+  totalBlogs: number;
+  totalProducts: number;
+  gameCategories: number;
+  blogCategories: number;
+  productCategories: number;
 }
 
-export default function AdminDashboard({ games, blogs, products }: AdminDashboardProps) {
-  const [stats, setStats] = useState({
-    totalGames: 0,
-    totalBlogs: 0,
-    totalProducts: 0,
-    gameCategories: 0,
-    blogCategories: 0,
-    productCategories: 0,
-  });
+interface AdminDashboardProps {
+  stats: AdminStats | null; // Accepte un objet de stats ou null pendant le chargement
+}
 
-  useEffect(() => {
-    setStats({
-      totalGames: games.length,
-      totalBlogs: blogs.length,
-      totalProducts: products.length,
-      gameCategories: new Set(games.map(g => g.category)).size,
-      blogCategories: new Set(blogs.map(b => b.category)).size,
-      productCategories: new Set(products.map(p => p.category)).size,
-    });
-  }, [games, blogs, products]);
+export default function AdminDashboard({ stats }: AdminDashboardProps) {
+  if (!stats) {
+    // Affiche des placeholders pendant le chargement des statistiques
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 animate-pulse">
+            <div className="bg-gray-700 h-32 rounded-lg"></div>
+            <div className="bg-gray-700 h-32 rounded-lg"></div>
+            <div className="bg-gray-700 h-32 rounded-lg"></div>
+        </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -55,7 +53,6 @@ export default function AdminDashboard({ games, blogs, products }: AdminDashboar
   );
 }
 
-// ✅ هنا زدت type واضح للـ color
 type ColorType = 'purple' | 'blue' | 'green';
 
 interface StatCardProps {

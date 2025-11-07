@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getDbClient } from '../../../db';
 import { isAuthorized } from '../auth/check';
 import { slugify } from '../../../lib/slugify';
-import { getAllBlogPosts } from '../../../lib/data';
 
 async function generateUniqueSlug(client: any, title: string, currentId: number | null = null): Promise<string> {
   let baseSlug = slugify(title);
@@ -30,17 +29,51 @@ async function generateUniqueSlug(client: any, title: string, currentId: number 
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
-
   const client = await getDbClient();
-
   try {
     if (req.method === 'GET') {
-      const posts = await getAllBlogPosts();
-      return res.status(200).json(posts);
-    } else if (req.method === 'POST') {
+      if (!isAuthorized(req)) {
+          return res.status(401).json({ error: 'Non autorisé' });
+      }
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string || '';
+      const offset = (page - 1) * limit;
+
+      let whereClause = '';
+      const queryParams: any[] = [];
+      if (search) {
+        queryParams.push(`%${search}%`);
+        whereClause = `WHERE title ILIKE $${queryParams.length} OR author ILIKE $${queryParams.length}`;
+      }
+      
+      const totalResult = await client.query(`SELECT COUNT(*) FROM blog_posts ${whereClause}`, queryParams);
+      const totalItems = parseInt(totalResult.rows[0].count, 10);
+      const totalPages = Math.ceil(totalItems / limit);
+
+      queryParams.push(limit, offset);
+      const itemsResult = await client.query(`
+        SELECT 
+          id, slug, title, summary, image_url AS "imageUrl", video_url AS "videoUrl",
+          author, publish_date AS "publishDate", rating::float, affiliate_url AS "affiliateUrl",
+          content, category
+        FROM blog_posts
+        ${whereClause}
+        ORDER BY id DESC
+        LIMIT $${queryParams.length-1} OFFSET $${queryParams.length}
+      `, queryParams);
+
+      return res.status(200).json({
+        items: itemsResult.rows,
+        pagination: { totalItems, totalPages, currentPage: page, itemsPerPage: limit }
+      });
+    }
+    
+    if (!isAuthorized(req)) {
+      return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    if (req.method === 'POST') {
       const { title, summary, imageUrl, videoUrl, author, publishDate, rating, affiliateUrl, content, category } = req.body;
       if (!title) return res.status(400).json({ error: 'Le champ "Titre" est obligatoire.' });
       

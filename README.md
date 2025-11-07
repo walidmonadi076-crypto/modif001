@@ -15,6 +15,11 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZzJIJpbFCEmYIVpVJRbvnQ
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Create a `.env.local` file by copying the example: `cp .env.local.example .env.local`
+3. Set the required environment variables in `.env.local`:
+   - `DATABASE_URL`: Your PostgreSQL connection string.
+   - `ADMIN_PASSWORD`: The password for the admin panel.
+   - `RECAPTCHA_SECRET_KEY`: Your Google reCAPTCHA secret key.
+   - `GEMINI_API_KEY`: Your Gemini API key.
+4. Run the app:
    `npm run dev`

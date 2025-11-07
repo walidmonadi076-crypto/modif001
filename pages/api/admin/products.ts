@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getDbClient } from '../../../db';
 import { isAuthorized } from '../auth/check';
 import { slugify } from '../../../lib/slugify';
-import { getAllProducts } from '../../../lib/data';
 
 async function generateUniqueSlug(client: any, name: string, currentId: number | null = null): Promise<string> {
   let baseSlug = slugify(name);
@@ -30,17 +29,49 @@ async function generateUniqueSlug(client: any, name: string, currentId: number |
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
-
   const client = await getDbClient();
 
   try {
     if (req.method === 'GET') {
-        const products = await getAllProducts();
-        return res.status(200).json(products);
-    } else if (req.method === 'POST') {
+      if (!isAuthorized(req)) {
+          return res.status(401).json({ error: 'Non autorisé' });
+      }
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string || '';
+      const offset = (page - 1) * limit;
+
+      let whereClause = '';
+      const queryParams: any[] = [];
+      if (search) {
+        queryParams.push(`%${search}%`);
+        whereClause = `WHERE name ILIKE $${queryParams.length}`;
+      }
+      
+      const totalResult = await client.query(`SELECT COUNT(*) FROM products ${whereClause}`, queryParams);
+      const totalItems = parseInt(totalResult.rows[0].count, 10);
+      const totalPages = Math.ceil(totalItems / limit);
+
+      queryParams.push(limit, offset);
+      const itemsResult = await client.query(`
+        SELECT id, slug, name, image_url AS "imageUrl", price, url, description, gallery, category
+        FROM products
+        ${whereClause}
+        ORDER BY id DESC
+        LIMIT $${queryParams.length-1} OFFSET $${queryParams.length}
+      `, queryParams);
+
+      return res.status(200).json({
+        items: itemsResult.rows,
+        pagination: { totalItems, totalPages, currentPage: page, itemsPerPage: limit }
+      });
+    }
+
+    if (!isAuthorized(req)) {
+        return res.status(401).json({ error: 'Non autorisé' });
+    }
+
+    if (req.method === 'POST') {
         const { name, imageUrl, price, url, description, gallery, category } = req.body;
         if (!name) return res.status(400).json({ error: 'Le champ "Nom" est obligatoire.' });
 

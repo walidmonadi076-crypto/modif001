@@ -3,16 +3,46 @@ import { getDbClient } from '../../../db';
 import { isAuthorized } from '../auth/check';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
-
   const client = await getDbClient();
 
   try {
-    if (req.method === 'GET') {
-      const result = await client.query('SELECT id, name, url, icon_svg FROM social_links ORDER BY id ASC');
-      return res.status(200).json(result.rows);
+     if (req.method === 'GET') {
+      if (!isAuthorized(req)) {
+        return res.status(401).json({ error: 'Non autorisé' });
+      }
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string || '';
+      const offset = (page - 1) * limit;
+
+      let whereClause = '';
+      const queryParams: any[] = [];
+      if (search) {
+        queryParams.push(`%${search}%`);
+        whereClause = `WHERE name ILIKE $${queryParams.length}`;
+      }
+      
+      const totalResult = await client.query(`SELECT COUNT(*) FROM social_links ${whereClause}`, queryParams);
+      const totalItems = parseInt(totalResult.rows[0].count, 10);
+      const totalPages = Math.ceil(totalItems / limit);
+
+      queryParams.push(limit, offset);
+      const itemsResult = await client.query(`
+        SELECT id, name, url, icon_svg
+        FROM social_links
+        ${whereClause}
+        ORDER BY id DESC
+        LIMIT $${queryParams.length-1} OFFSET $${queryParams.length}
+      `, queryParams);
+
+      return res.status(200).json({
+        items: itemsResult.rows,
+        pagination: { totalItems, totalPages, currentPage: page, itemsPerPage: limit }
+      });
+    }
+
+    if (!isAuthorized(req)) {
+      return res.status(401).json({ error: 'Non autorisé' });
     }
     
     const { id, name, url, icon_svg } = req.body;
@@ -26,12 +56,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: 'Une URL valide est obligatoire.' });
         }
         
-        // Ajoute automatiquement https:// si le protocole est manquant
         if (!/^https?:\/\//i.test(url)) {
             processedUrl = `https://${url}`;
         }
         
-        // Valide le format final de l'URL
         try {
             new URL(processedUrl);
         } catch (_) {

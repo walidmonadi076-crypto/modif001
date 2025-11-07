@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getDbClient } from '../../../db';
 import { isAuthorized } from '../auth/check';
 import { slugify } from '../../../lib/slugify';
-import { getAllGames } from '../../../lib/data';
 
 async function generateUniqueSlug(client: any, title: string, currentId: number | null = null): Promise<string> {
   let baseSlug = slugify(title);
@@ -30,17 +29,51 @@ async function generateUniqueSlug(client: any, title: string, currentId: number 
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Non autorisé' });
-  }
-
   const client = await getDbClient();
 
   try {
-    if (req.method === 'GET') {
-      const games = await getAllGames();
-      return res.status(200).json(games);
-    } else if (req.method === 'POST') {
+     if (req.method === 'GET') {
+        if (!isAuthorized(req)) {
+            return res.status(401).json({ error: 'Non autorisé' });
+        }
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const search = req.query.search as string || '';
+        const offset = (page - 1) * limit;
+
+        let whereClause = '';
+        const queryParams: any[] = [];
+        if (search) {
+            queryParams.push(`%${search}%`);
+            whereClause = `WHERE title ILIKE $${queryParams.length}`;
+        }
+        
+        const totalResult = await client.query(`SELECT COUNT(*) FROM games ${whereClause}`, queryParams);
+        const totalItems = parseInt(totalResult.rows[0].count, 10);
+        const totalPages = Math.ceil(totalItems / limit);
+
+        queryParams.push(limit, offset);
+        const itemsResult = await client.query(`
+            SELECT
+                id, slug, title, image_url AS "imageUrl", category, tags, theme, description,
+                video_url AS "videoUrl", download_url AS "downloadUrl", gallery
+            FROM games
+            ${whereClause}
+            ORDER BY id DESC
+            LIMIT $${queryParams.length-1} OFFSET $${queryParams.length}
+        `, queryParams);
+
+        return res.status(200).json({
+            items: itemsResult.rows,
+            pagination: { totalItems, totalPages, currentPage: page, itemsPerPage: limit }
+        });
+    }
+
+    if (!isAuthorized(req)) {
+        return res.status(401).json({ error: 'Non autorisé' });
+    }
+    
+    if (req.method === 'POST') {
       const { title, imageUrl, category, tags, theme, description, videoUrl, downloadUrl, gallery } = req.body;
       if (!title) return res.status(400).json({ error: 'Le champ "Titre" est obligatoire.' });
 
