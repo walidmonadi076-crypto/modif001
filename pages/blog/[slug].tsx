@@ -34,18 +34,10 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ post, comments: initial
         "description": post.summary
     };
 
-    const handleCommentAdded = async () => {
-        // After a successful post, we refetch the comments for this post
-        // to provide an immediate update to the user who posted.
-        try {
-            const res = await fetch(`/api/comments/${post.id}`);
-            if (res.ok) {
-                const newComments = await res.json();
-                setComments(newComments);
-            }
-        } catch (error) {
-            console.error("Failed to refresh comments:", error);
-        }
+    const handleCommentAdded = (newComment: Comment) => {
+        // Ajoute le nouveau commentaire à l'état local pour un retour visuel immédiat
+        // pour l'utilisateur qui vient de poster.
+        setComments(prevComments => [newComment, ...prevComments]);
     };
 
     return (

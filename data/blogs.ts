@@ -46,10 +46,13 @@ export const BLOGS_DATA: BlogPost[] = [
 
 export const COMMENTS_DATA: { [key: number]: Comment[] } = {
     1: [
-        { id: 1, author: "GamerPro123", avatarUrl: "https://i.pravatar.cc/40?u=1", date: "2 days ago", text: "Great article! I just bought the Corsair K100 based on this review and it's amazing. The difference is night and day." },
-        { id: 2, author: "PixelPioneer", avatarUrl: "https://i.pravatar.cc/40?u=2", date: "1 day ago", text: "I've been using a Keychron for a while now and I love the customizability. Happy to see it get a mention!" },
+        // Fix: Added missing 'status' and 'email' properties to conform to the Comment type.
+        { id: 1, author: "GamerPro123", avatarUrl: "https://i.pravatar.cc/40?u=1", date: "2 days ago", text: "Great article! I just bought the Corsair K100 based on this review and it's amazing. The difference is night and day.", status: 'approved', email: 'gamerpro123@example.com' },
+        // Fix: Added missing 'status' and 'email' properties to conform to the Comment type.
+        { id: 2, author: "PixelPioneer", avatarUrl: "https://i.pravatar.cc/40?u=2", date: "1 day ago", text: "I've been using a Keychron for a while now and I love the customizability. Happy to see it get a mention!", status: 'approved', email: 'pixelpioneer@example.com' },
     ],
     2: [
-        { id: 3, author: "FPS_Queen", avatarUrl: "https://i.pravatar.cc/40?u=3", date: "5 days ago", text: "Sensor accuracy is everything. Thanks for breaking down the technical specs in an easy-to-understand way." },
+        // Fix: Added missing 'status' and 'email' properties to conform to the Comment type.
+        { id: 3, author: "FPS_Queen", avatarUrl: "https://i.pravatar.cc/40?u=3", date: "5 days ago", text: "Sensor accuracy is everything. Thanks for breaking down the technical specs in an easy-to-understand way.", status: 'approved', email: 'fpsqueen@example.com' },
     ]
 };

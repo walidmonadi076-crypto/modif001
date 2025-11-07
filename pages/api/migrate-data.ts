@@ -64,9 +64,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (const [blogId, comments] of Object.entries(COMMENTS_DATA)) {
       for (const comment of comments) {
         await client.query(
-          `INSERT INTO comments (id, blog_post_id, author, avatar_url, date, text) 
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [comment.id, parseInt(blogId), comment.author, comment.avatarUrl, comment.date, comment.text]
+          `INSERT INTO comments (id, blog_post_id, author, avatar_url, date, text, status, email) 
+           VALUES ($1, $2, $3, $4, $5, $6, 'approved', $7)`,
+          [comment.id, parseInt(blogId), comment.author, comment.avatarUrl, comment.date, comment.text, `seeduser${comment.id}@example.com`]
         );
       }
     }

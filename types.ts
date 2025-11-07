@@ -32,6 +32,12 @@ export interface Comment {
   avatarUrl: string;
   date: string;
   text: string;
+  // Champs ajoutés pour la modération et l'administration
+  status: 'pending' | 'approved';
+  email: string;
+  phone?: string;
+  blog_post_id?: number;
+  blog_title?: string;
 }
 
 export interface BlogPost {
