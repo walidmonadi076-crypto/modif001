@@ -83,7 +83,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
 export const getStaticPaths: GetStaticPaths = async () => {
     const products = await getAllProducts();
     const paths = products
-        .filter(product => product && product.slug) // Ensures only products with slugs are processed
+        .filter(product => product && product.slug && typeof product.slug === 'string') // Ensures only products with valid string slugs are processed
         .map(product => ({
             params: { slug: product.slug },
         }));

@@ -81,7 +81,7 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ post, comments }) => {
 export const getStaticPaths: GetStaticPaths = async () => {
     const posts = await getAllBlogPosts();
     const paths = posts
-        .filter(post => post && post.slug) // Ensures only posts with slugs are processed
+        .filter(post => post && post.slug && typeof post.slug === 'string') // Ensures only posts with valid string slugs are processed
         .map(post => ({
             params: { slug: post.slug },
         }));
