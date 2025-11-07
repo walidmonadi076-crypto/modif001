@@ -2,11 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getDbClient } from '../../../db';
 import type { Comment } from '../../../types';
 
-// Simple in-memory rate limiter to prevent spam
-const rateLimiter = new Map<string, { count: number; expiry: number }>();
-const MAX_REQUESTS = 3; // Max 3 comments per IP
-const WINDOW_DURATION = 10 * 60 * 1000; // in a 10 minute window
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Comment | { error: string }>
@@ -16,25 +11,38 @@ export default async function handler(
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  // --- Rate Limiting Logic ---
-  const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  const record = rateLimiter.get(ip);
+  const { postId, author, text, recaptchaToken } = req.body;
 
-  if (record && now < record.expiry) {
-    if (record.count >= MAX_REQUESTS) {
-      return res.status(429).json({ error: 'Too many comments. Please try again in a few minutes.' });
-    }
-    rateLimiter.set(ip, { ...record, count: record.count + 1 });
-  } else {
-    // Start a new record for this IP
-    rateLimiter.set(ip, { count: 1, expiry: now + WINDOW_DURATION });
+  // --- reCAPTCHA Verification ---
+  if (!recaptchaToken) {
+    return res.status(400).json({ error: 'Please complete the reCAPTCHA.' });
   }
-  
-  // --- Input Validation & Human Verification ---
-  const { postId, author, text, num1, num2, answer } = req.body;
 
-  if (!postId || !author || !text || !answer || num1 === undefined || num2 === undefined) {
+  try {
+    const secretKey = '6Lcm1QUsAAAAAO4ClV3H-_pYeUlNPL-AJhRgwoI9';
+    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify`;
+    
+    const response = await fetch(verificationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `secret=${secretKey}&response=${recaptchaToken}`,
+    });
+
+    const verificationData = await response.json();
+
+    if (!verificationData.success) {
+      console.warn('reCAPTCHA verification failed:', verificationData['error-codes']);
+      return res.status(400).json({ error: 'Failed reCAPTCHA verification.' });
+    }
+  } catch (error) {
+    console.error("reCAPTCHA verification error:", error);
+    return res.status(500).json({ error: 'An error occurred during verification.' });
+  }
+
+  // --- Input Validation ---
+  if (!postId || !author || !text) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
   if (author.trim().length < 2 || author.trim().length > 50) {
@@ -42,9 +50,6 @@ export default async function handler(
   }
   if (text.trim().length < 10 || text.trim().length > 1000) {
     return res.status(400).json({ error: 'Comment must be between 10 and 1000 characters.' });
-  }
-  if (parseInt(answer, 10) !== num1 + num2) {
-      return res.status(400).json({ error: 'Incorrect answer to the human verification question.' });
   }
 
   const client = await getDbClient();

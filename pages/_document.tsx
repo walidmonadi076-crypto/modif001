@@ -47,6 +47,9 @@ class MyDocument extends Document {
               src={ogadsScriptUrl}
             />
           )}
+
+          {/* Google reCAPTCHA Script */}
+          <script src="https://www.google.com/recaptcha/api.js" async defer></script>
         </Head>
         <body>
           <Main />
