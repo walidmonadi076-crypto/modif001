@@ -27,12 +27,13 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
   };
 
   const { width, height, text } = getAdDimensions();
+  const style = { width: `${width}px`, height: `${height}px`, maxWidth: '100%' };
 
   // Loading state placeholder
   if (isLoading) {
     return (
       <div 
-        style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
+        style={style} 
         className="bg-surface-alt/50 border-2 border-dashed border-border rounded-lg flex items-center justify-center animate-pulse"
       >
         <span className="text-muted text-sm font-semibold">Loading Ad...</span>
@@ -44,7 +45,7 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
   if (!ad || !ad.code) {
     return (
        <div 
-        style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
+        style={style} 
         className="bg-surface-alt/50 border-2 border-dashed border-border rounded-lg flex items-center justify-center"
       >
         <span className="text-muted text-sm font-semibold">{text}</span>
@@ -52,31 +53,13 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     );
   }
   
-  // Create the full HTML content for the iframe's srcDoc.
-  // This isolates the ad script in its own environment.
-  const iframeContent = `
-    <html>
-      <head>
-        <style>body { margin: 0; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }</style>
-      </head>
-      <body>
-        ${ad.code}
-      </body>
-    </html>
-  `;
-
+  // Reverting to dangerouslySetInnerHTML to avoid iframe sandboxing issues
+  // that cause 403 errors with certain ad networks. This approach ensures
+  // the ad script runs in the expected environment.
   return (
-    <iframe
-      title={`Ad for ${placement}`}
-      width={width}
-      height={height}
-      style={{ border: 'none', maxWidth: '100%', verticalAlign: 'middle' }}
-      srcDoc={iframeContent}
-      // Sandboxing the iframe for security. These permissions are often required by ad networks.
-      // `allow-scripts` is needed to run the ad.
-      // `allow-same-origin` is often needed for the script's internal logic.
-      // The other permissions allow for proper ad functionality like clicks and forms.
-      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+    <div
+      style={{ ...style, display: 'inline-block', verticalAlign: 'middle' }}
+      dangerouslySetInnerHTML={{ __html: ad.code }}
     />
   );
 };
