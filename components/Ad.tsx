@@ -33,9 +33,9 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     return (
       <div 
         style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
-        className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center animate-pulse"
+        className="bg-surface-alt/50 border-2 border-dashed border-border rounded-lg flex items-center justify-center animate-pulse"
       >
-        <span className="text-gray-500 text-sm font-semibold">Loading Ad...</span>
+        <span className="text-muted text-sm font-semibold">Loading Ad...</span>
       </div>
     );
   }
@@ -45,44 +45,20 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     return (
        <div 
         style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
-        className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center"
+        className="bg-surface-alt/50 border-2 border-dashed border-border rounded-lg flex items-center justify-center"
       >
-        <span className="text-gray-500 text-sm font-semibold">{text}</span>
+        <span className="text-muted text-sm font-semibold">{text}</span>
       </div>
     );
   }
   
-  const iframeContent = `
-    <html>
-      <head>
-        <style>
-          /* This style block is crucial for containing the ad script */
-          html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* The key to preventing scrollbars */
-          }
-        </style>
-      </head>
-      <body>
-        ${ad.code}
-      </body>
-    </html>
-  `;
-
-
-  // The iframe component that isolates the ad code
+  // The new implementation: directly render the ad code.
+  // This avoids the cross-origin iframe security error, as requested by the user.
+  // The ad script will run in the main document's context.
   return (
-    <iframe
-      title={`Ad for ${placement}`}
-      srcDoc={iframeContent}
-      width={width}
-      height={height}
-      style={{ maxWidth: '100%', border: 'none' }}
-      sandbox="allow-scripts allow-popups allow-forms" // Security sandbox to isolate the ad
-      scrolling="no" // Explicitly disable scrolling on the iframe element
+    <div
+      style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%', display: 'inline-block', verticalAlign: 'middle', lineHeight: 0 }}
+      dangerouslySetInnerHTML={{ __html: ad.code }}
     />
   );
 };
