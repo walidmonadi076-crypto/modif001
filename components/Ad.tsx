@@ -52,13 +52,31 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     );
   }
   
-  // The new implementation: directly render the ad code.
-  // This avoids the cross-origin iframe security error, as requested by the user.
-  // The ad script will run in the main document's context.
+  // Create the full HTML content for the iframe's srcDoc.
+  // This isolates the ad script in its own environment.
+  const iframeContent = `
+    <html>
+      <head>
+        <style>body { margin: 0; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }</style>
+      </head>
+      <body>
+        ${ad.code}
+      </body>
+    </html>
+  `;
+
   return (
-    <div
-      style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%', display: 'inline-block', verticalAlign: 'middle', lineHeight: 0 }}
-      dangerouslySetInnerHTML={{ __html: ad.code }}
+    <iframe
+      title={`Ad for ${placement}`}
+      width={width}
+      height={height}
+      style={{ border: 'none', maxWidth: '100%', verticalAlign: 'middle' }}
+      srcDoc={iframeContent}
+      // Sandboxing the iframe for security. These permissions are often required by ad networks.
+      // `allow-scripts` is needed to run the ad.
+      // `allow-same-origin` is often needed for the script's internal logic.
+      // The other permissions allow for proper ad functionality like clicks and forms.
+      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
     />
   );
 };
