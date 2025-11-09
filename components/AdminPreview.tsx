@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -56,29 +55,46 @@ const AdminPreview: React.FC<AdminPreviewProps> = ({ data, type }) => {
 
   const previewTarget = previewPageMap[type];
 
-  const calculateScale = useCallback(() => {
-    if (!previewContainerRef.current) return;
-    
-    const container = previewContainerRef.current;
-    const { width: deviceWidth, height: deviceHeight } = deviceDimensions[device];
-    
-    const containerWidth = container.offsetWidth - 20; // Some padding
-    const containerHeight = container.offsetHeight - 20;
-
-    if (deviceWidth <= 0 || deviceHeight <= 0) return;
-
-    const scaleX = containerWidth / deviceWidth;
-    const scaleY = containerHeight / deviceHeight;
-    
-    const newScale = Math.min(scaleX, scaleY, 1); 
-    setScale(newScale);
-  }, [device]);
-
+  // This effect now uses a ResizeObserver to accurately calculate the scale
+  // whenever the container's size changes, for any reason.
   useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+
+    const calculateScale = () => {
+      const { width: deviceWidth, height: deviceHeight } = deviceDimensions[device];
+      
+      // Give the frame some breathing room inside the container
+      const containerWidth = container.offsetWidth - 16;
+      const containerHeight = container.offsetHeight - 16;
+
+      if (deviceWidth <= 0 || deviceHeight <= 0 || containerWidth <= 0 || containerHeight <= 0) {
+        setScale(1);
+        return;
+      }
+
+      const scaleX = containerWidth / deviceWidth;
+      const scaleY = containerHeight / deviceHeight;
+      
+      const newScale = Math.min(scaleX, scaleY, 1); // Never scale up, only down
+      setScale(newScale);
+    };
+
+    // Use requestAnimationFrame to avoid "ResizeObserver loop limit exceeded" errors
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(calculateScale);
+    });
+    
+    resizeObserver.observe(container);
+    
+    // Perform initial calculation
     calculateScale();
-    window.addEventListener('resize', calculateScale);
-    return () => window.removeEventListener('resize', calculateScale);
-  }, [calculateScale]);
+
+    // Cleanup observer on unmount or when device changes
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [device]); // Rerun this entire effect only when the device type changes
 
   useEffect(() => {
     if (iframeRef.current && iframeLoaded && data && previewTarget) {
@@ -124,15 +140,12 @@ const AdminPreview: React.FC<AdminPreviewProps> = ({ data, type }) => {
           </ToolbarButton>
         </div>
         <div className="flex items-center gap-2">
-          {/* FIX: Removed the extraneous 'device' and 'currentDevice' props that were causing a TypeScript error. */}
           <ToolbarButton onClick={() => setDevice('desktop')} isActive={device === 'desktop'} ariaLabel="Switch to desktop preview">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z" /></svg>
           </ToolbarButton>
-          {/* FIX: Removed the extraneous 'device' and 'currentDevice' props that were causing a TypeScript error. */}
           <ToolbarButton onClick={() => setDevice('tablet')} isActive={device === 'tablet'} ariaLabel="Switch to tablet preview">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5h3m-6.375-3.375h9.75m-9.75-3h9.75m-9.75-3h9.75m0-3h-9.75M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" /></svg>
           </ToolbarButton>
-          {/* FIX: Removed the extraneous 'device' and 'currentDevice' props that were causing a TypeScript error. */}
           <ToolbarButton onClick={() => setDevice('mobile')} isActive={device === 'mobile'} ariaLabel="Switch to mobile preview">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75A2.25 2.25 0 0015.75 1.5h-2.25m-3.75 0h3.75M12 18.75h.008v.008H12v-.008z" /></svg>
           </ToolbarButton>
@@ -149,7 +162,7 @@ const AdminPreview: React.FC<AdminPreviewProps> = ({ data, type }) => {
       <div ref={previewContainerRef} className="flex-grow flex items-center justify-center overflow-hidden bg-gray-800 rounded-md p-2">
         <div
           id="preview-frame-container"
-          className="shadow-2xl rounded-lg border-2 border-gray-700 overflow-hidden transition-all duration-300 ease-in-out bg-gray-900"
+          className="shadow-2xl rounded-lg border-2 border-gray-700 ring-1 ring-inset ring-white/5 overflow-hidden transition-all duration-300 ease-in-out bg-gray-900"
           style={{
             width: `${deviceWidth}px`,
             height: `${deviceHeight}px`,
