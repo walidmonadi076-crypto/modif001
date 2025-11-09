@@ -1,3 +1,4 @@
+
 import Document, { Html, Head, Main, NextScript, DocumentContext, DocumentInitialProps } from 'next/document';
 import type { ReactElement, ReactNode } from 'react';
 
@@ -52,6 +53,27 @@ class MyDocument extends Document {
           <script src="https://www.google.com/recaptcha/api.js" async defer></script>
         </Head>
         <body>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+              (function() {
+                  function getInitialTheme() {
+                      try {
+                          const storedTheme = window.localStorage.getItem('theme');
+                          if (storedTheme) return storedTheme;
+                          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                      } catch (e) {
+                          return 'dark'; // Default to dark on error
+                      }
+                  }
+                  const theme = getInitialTheme();
+                  if (theme === 'light') {
+                      document.documentElement.classList.add('light');
+                  }
+              })();
+              `,
+            }}
+          />
           <Main />
           <NextScript />
         </body>

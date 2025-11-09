@@ -26,6 +26,7 @@ interface GamesPageProps {
 const GamesPage: React.FC<GamesPageProps> = ({ searchQuery, games }) => {
   const router = useRouter();
   const selectedCategory = (router.query.category as string) || 'All';
+  const selectedTag = (router.query.tags as string) || null;
 
   const categories = useMemo(() => ['All', ...Array.from(new Set(games.map(g => g.category)))], [games]);
   
@@ -33,9 +34,10 @@ const GamesPage: React.FC<GamesPageProps> = ({ searchQuery, games }) => {
     return games.filter(game => {
         const matchesQuery = game.title.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = selectedCategory === 'All' || game.category === selectedCategory;
-        return matchesQuery && matchesCategory;
+        const matchesTag = !selectedTag || (game.tags && game.tags.includes(selectedTag));
+        return matchesQuery && matchesCategory && matchesTag;
     });
-  }, [games, selectedCategory, searchQuery]);
+  }, [games, selectedCategory, selectedTag, searchQuery]);
   
   const handleCategorySelect = (cat: string) => {
     const newQuery = { ...router.query };
@@ -44,10 +46,11 @@ const GamesPage: React.FC<GamesPageProps> = ({ searchQuery, games }) => {
     } else {
         newQuery.category = cat;
     }
+    delete newQuery.tags;
     router.push({ pathname: '/games', query: newQuery }, undefined, { shallow: true });
   };
   
-  const areFiltersActive = searchQuery || (selectedCategory && selectedCategory !== 'All');
+  const areFiltersActive = searchQuery || (selectedCategory && selectedCategory !== 'All') || selectedTag;
 
   return (
     <div>
@@ -58,7 +61,7 @@ const GamesPage: React.FC<GamesPageProps> = ({ searchQuery, games }) => {
       <div className="flex flex-wrap gap-2 items-center mb-8">
         <span className="text-sm font-medium text-gray-400 mr-2 hidden sm:inline">Categories:</span>
         {categories.map(cat => (
-          <FilterButton key={cat} label={cat} isActive={selectedCategory === cat} onClick={() => handleCategorySelect(cat)} />
+          <FilterButton key={cat} label={cat} isActive={selectedCategory === cat && !selectedTag} onClick={() => handleCategorySelect(cat)} />
         ))}
       </div>
 

@@ -89,6 +89,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
         [title, slug, imageUrl, category, tags || [], theme || null, description, videoUrl || null, downloadUrl || '#', gallery || []]
       );
+      
+      try {
+        await res.revalidate('/');
+        await res.revalidate('/games');
+      } catch (err) {
+        console.error('Error revalidating pages after game creation:', err);
+      }
+      
       res.status(201).json(result.rows[0]);
 
     } else if (req.method === 'PUT') {
@@ -106,6 +114,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (result.rows.length === 0) {
         res.status(404).json({ message: 'Game not found' });
       } else {
+        try {
+            await res.revalidate('/');
+            await res.revalidate('/games');
+            const updatedSlug = result.rows[0].slug;
+            if (updatedSlug) {
+                await res.revalidate(`/games/${updatedSlug}`);
+            }
+        } catch (err) {
+            console.error('Error revalidating pages after game update:', err);
+        }
         res.status(200).json(result.rows[0]);
       }
     } else if (req.method === 'DELETE') {
@@ -114,6 +132,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (result.rows.length === 0) {
         res.status(404).json({ message: 'Game not found' });
       } else {
+        try {
+            await res.revalidate('/');
+            await res.revalidate('/games');
+        } catch (err) {
+            console.error('Error revalidating pages after game deletion:', err);
+        }
         res.status(200).json({ message: 'Game deleted successfully' });
       }
     } else {

@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Ad } from '../types';
+
+// --- AD CONTEXT ---
 
 interface AdContextType {
   ads: Ad[];
@@ -39,5 +42,53 @@ export const AdProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     <AdContext.Provider value={{ ads, isLoading }}>
       {children}
     </AdContext.Provider>
+  );
+};
+
+// --- THEME CONTEXT ---
+
+type Theme = 'light' | 'dark';
+
+interface ThemeContextType {
+  theme: Theme;
+  toggleTheme: () => void;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
+
+export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [theme, setTheme] = useState<Theme>('dark');
+
+  useEffect(() => {
+    // On component mount, sync state with the class set by the script in _document.tsx
+    const currentTheme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+    setTheme(currentTheme);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prevTheme => {
+      const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', newTheme);
+      if (newTheme === 'light') {
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+      }
+      return newTheme;
+    });
+  }, []);
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
   );
 };
