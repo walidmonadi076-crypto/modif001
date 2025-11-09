@@ -7,7 +7,8 @@ import type { SiteSettings } from '../../../types';
 const SETTING_KEYS = [
   'site_name', 'site_icon_url', 'ogads_script_src',
   'hero_title', 'hero_subtitle', 'hero_button_text', 'hero_button_url', 'hero_bg_url',
-  'promo_enabled', 'promo_text', 'promo_button_text', 'promo_button_url'
+  'promo_enabled', 'promo_text', 'promo_button_text', 'promo_button_url',
+  'recaptcha_site_key'
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

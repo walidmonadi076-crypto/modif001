@@ -419,9 +419,17 @@ export default function AdminPanel() {
                     )}
                 </section>
                 <section>
-                    <h3 className="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Script OGAds</h3>
-                    {renderSettingInput('ogads_script_src', 'Script OGAds', 'textarea', 4)}
-                    <p className="text-xs text-gray-400 mt-2">Collez ici le code `&lt;script&gt;` complet fourni par OGAds.</p>
+                    <h3 className="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Intégrations (Clés API)</h3>
+                    <div className="space-y-6">
+                        <div>
+                            {renderSettingInput('ogads_script_src', 'Script OGAds', 'textarea', 4)}
+                            <p className="text-xs text-gray-400 mt-2">Collez ici le code `&lt;script&gt;` complet fourni par OGAds.</p>
+                        </div>
+                        <div>
+                            {renderSettingInput('recaptcha_site_key', 'Clé du site reCAPTCHA v2')}
+                            <p className="text-xs text-gray-400 mt-2">Collez la "Clé du site" de votre console Google reCAPTCHA. Assurez-vous que votre domaine est autorisé.</p>
+                        </div>
+                    </div>
                 </section>
 
                 <div className="flex justify-end"><button onClick={handleSaveSettings} className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-md font-semibold transition-colors">Sauvegarder les Paramètres</button></div>

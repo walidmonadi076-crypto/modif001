@@ -100,5 +100,6 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     promo_text: settings.promo_text || 'Climb the new G2gaming leaderboards',
     promo_button_text: settings.promo_button_text || 'Explore games',
     promo_button_url: settings.promo_button_url || '/games',
+    recaptcha_site_key: settings.recaptcha_site_key || '6Lcm1QUsAAAAAP4bS9QiKH9jCpDXQ3ktJsgQwcO4',
   };
 }

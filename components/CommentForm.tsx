@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import type { Comment } from '../types';
+import { useSettings } from '../contexts/AdContext';
 
 declare global {
   interface Window {
@@ -16,6 +17,7 @@ interface CommentFormProps {
 }
 
 const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => {
+  const { settings } = useSettings();
   const [author, setAuthor] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -33,9 +35,9 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
     window.onRecaptchaExpired = () => setRecaptchaToken(null);
 
     const renderRecaptcha = () => {
-      if (recaptchaRef.current && typeof window.grecaptcha?.render === 'function') {
+      if (recaptchaRef.current && typeof window.grecaptcha?.render === 'function' && settings.recaptcha_site_key) {
         const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-          'sitekey': '6Lcm1QUsAAAAAP4bS9QiKH9jCpDXQ3ktJsgQwcO4', // Google's public v2 test key
+          'sitekey': settings.recaptcha_site_key,
           'callback': 'onRecaptchaSuccess',
           'expired-callback': 'onRecaptchaExpired',
           'theme': 'dark'
@@ -60,7 +62,7 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
       window.onRecaptchaSuccess = undefined;
       window.onRecaptchaExpired = undefined;
     };
-  }, []);
+  }, [settings.recaptcha_site_key]);
   
   const resetRecaptcha = () => {
     if (window.grecaptcha && recaptchaWidgetId !== null) {

@@ -134,7 +134,8 @@ MyApp.getInitialProps = async (appContext: AppContext) => {
       promo_enabled: false,
       promo_text: '',
       promo_button_text: '',
-      promo_button_url: ''
+      promo_button_url: '',
+      recaptcha_site_key: '',
     };
   }
   return appProps;

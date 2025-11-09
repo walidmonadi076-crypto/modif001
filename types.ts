@@ -80,4 +80,5 @@ export interface SiteSettings {
   promo_text: string;
   promo_button_text: string;
   promo_button_url: string;
+  recaptcha_site_key: string;
 }
