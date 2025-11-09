@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
@@ -37,6 +38,16 @@ function MyApp({ Component, pageProps }: AppProps) {
     }
   }, [isAdminPage]);
 
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    const searchablePages = ['/games', '/blog', '/shop'];
+    // If the user starts searching on a page that doesn't display search results (like the homepage or a detail page),
+    // redirect them to the main games page to show the results.
+    if (query && !searchablePages.includes(router.pathname)) {
+      router.push('/games');
+    }
+  };
+
   const enhancedPageProps = {
     ...pageProps,
     searchQuery,
@@ -72,7 +83,7 @@ function MyApp({ Component, pageProps }: AppProps) {
           >
             <Header
               searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
+              onSearchChange={handleSearchChange}
               onSearchFocus={() => setSearchActive(true)}
               onSearchBlur={() => setTimeout(() => setSearchActive(false), 200)}
               onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}

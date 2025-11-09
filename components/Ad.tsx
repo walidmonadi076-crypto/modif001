@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAds } from '../contexts/AdContext';
 
 interface AdProps {
@@ -7,6 +7,7 @@ interface AdProps {
 
 const Ad: React.FC<AdProps> = ({ placement }) => {
   const { ads, isLoading } = useAds();
+  const adContainerRef = useRef<HTMLDivElement>(null);
   
   const ad = ads.find(a => a.placement === placement);
 
@@ -28,11 +29,49 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
 
   const { width, height, text } = getAdDimensions();
 
-  // Loading state placeholder
+  useEffect(() => {
+    const container = adContainerRef.current;
+    // Only run if the container exists and we have ad code to inject.
+    if (!container || !ad?.code) {
+      return;
+    }
+
+    // Set the innerHTML. This will render non-script tags but not execute scripts.
+    container.innerHTML = ad.code;
+
+    // Find all the script tags that were injected.
+    const scripts = Array.from(container.getElementsByTagName('script'));
+    scripts.forEach(oldScript => {
+      // To execute the script, we need to create a new script element.
+      const newScript = document.createElement('script');
+      
+      // Copy all attributes from the original script to the new one.
+      Array.from(oldScript.attributes).forEach(attr => {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      
+      // Copy the inline script content.
+      newScript.text = oldScript.text;
+      
+      // Replace the old, non-executable script with the new, executable one.
+      oldScript.parentNode?.replaceChild(newScript, oldScript);
+    });
+
+    // Cleanup function: remove the ad content when the component unmounts or the ad code changes.
+    return () => {
+      if (container) {
+        container.innerHTML = '';
+      }
+    };
+  }, [ad?.code]); // The effect depends on the ad code.
+
+  const adDimensionsStyle = { width: `${width}px`, height: `${height}px`, maxWidth: '100%' };
+
+  // Display a loading placeholder while fetching ads.
   if (isLoading) {
     return (
       <div 
-        style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
+        style={adDimensionsStyle} 
         className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center animate-pulse"
       >
         <span className="text-gray-500 text-sm font-semibold">Loading Ad...</span>
@@ -40,11 +79,11 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     );
   }
 
-  // If no ad code is available, show a placeholder
+  // If there's no ad code for this placement, show a static placeholder.
   if (!ad || !ad.code) {
     return (
        <div 
-        style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
+        style={adDimensionsStyle} 
         className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center"
       >
         <span className="text-gray-500 text-sm font-semibold">{text}</span>
@@ -52,39 +91,8 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
     );
   }
   
-  const iframeContent = `
-    <html>
-      <head>
-        <style>
-          /* This style block is crucial for containing the ad script */
-          html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* The key to preventing scrollbars */
-          }
-        </style>
-      </head>
-      <body>
-        ${ad.code}
-      </body>
-    </html>
-  `;
-
-
-  // The iframe component that isolates the ad code
-  return (
-    <iframe
-      title={`Ad for ${placement}`}
-      srcDoc={iframeContent}
-      width={width}
-      height={height}
-      style={{ maxWidth: '100%', border: 'none' }}
-      sandbox="allow-scripts allow-popups allow-forms" // Security sandbox to isolate the ad
-      scrolling="no" // Explicitly disable scrolling on the iframe element
-    />
-  );
+  // If an ad code exists, render the container that the useEffect will populate.
+  return <div ref={adContainerRef} style={adDimensionsStyle} />;
 };
 
 export default Ad;
