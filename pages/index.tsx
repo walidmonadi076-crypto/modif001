@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useRouter } from 'next/router';
 import type { GetStaticProps } from 'next';
@@ -26,7 +27,8 @@ const Home: React.FC<HomeProps> = ({ games, settings }) => {
 
   const sections = useMemo(() => {
     const priorityOrder = ['Play on Comet', 'New', 'Hot', 'Updated', 'Top', 'Featured'];
-    const allTags: string[] = [...new Set(games.flatMap(game => game.tags || []))];
+    // FIX: Replaced flatMap with reduce to ensure correct type inference.
+    const allTags: string[] = [...new Set(games.reduce((acc: string[], game) => acc.concat(game.tags || []), []))];
     const priorityTags = priorityOrder.filter(tag => allTags.includes(tag));
     const otherTags = allTags.filter(tag => !priorityOrder.includes(tag)).sort();
     const orderedTags = [...priorityTags, ...otherTags];

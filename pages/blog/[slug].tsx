@@ -50,10 +50,16 @@ const BlogDetailPage: React.FC<BlogDetailPageProps> = ({ post, comments: initial
                 url={`/blog/${post.slug}`}
                 schema={blogSchema}
             />
+
+            {/* This share bar is fixed on the screen for large displays, positioned to the left of the main content area. */}
+            <div className="hidden lg:block fixed left-[17rem] top-1/2 -translate-y-1/2 z-30">
+                <ShareBar title={post.title} orientation="vertical" />
+            </div>
+
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <aside className="hidden lg:block lg:col-span-2">
                     <div className="sticky top-24">
-                        <ShareBar title={post.title} orientation="vertical" />
+                        <Ad placement="blog_skyscraper_left" />
                     </div>
                 </aside>
                 

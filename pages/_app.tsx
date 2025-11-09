@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import type { AppProps, AppContext } from 'next/app';
-import App from 'next/app';
+import App, { type AppProps, type AppContext } from 'next/app';
 import { useRouter } from 'next/router';
 import { Inter } from 'next/font/google';
 import Sidebar from '@/components/Sidebar';

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import type { Game, BlogPost, Product, SocialLink, Ad, Comment, SiteSettings } from '../../types';

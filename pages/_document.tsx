@@ -1,3 +1,5 @@
+
+import React from 'react';
 import Document, { Html, Head, Main, NextScript, DocumentContext, DocumentInitialProps } from 'next/document';
 import { getSiteSettings } from '../lib/data';
 
