@@ -37,11 +37,10 @@ const ShareBar: React.FC<ShareBarProps> = ({ title, orientation = 'vertical' }) 
   const isVertical = orientation === 'vertical';
 
   return (
-    <div className={`flex ${isVertical ? 'flex-col items-center gap-2' : 'flex-wrap justify-center gap-4'}`}>
+    <div className={`flex ${isVertical ? 'flex-col items-center gap-3' : 'flex-wrap justify-center gap-4'}`}>
       {isVertical && (
         <div className="flex flex-col items-center text-center text-gray-400 mb-2">
-            <svg className="w-8 h-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-            <span className="font-bold text-lg text-white">{shareCount}</span>
+            <span className="font-bold text-2xl text-white">{shareCount}</span>
             <span className="text-xs uppercase tracking-wider">Shares</span>
         </div>
       )}
@@ -50,12 +49,12 @@ const ShareBar: React.FC<ShareBarProps> = ({ title, orientation = 'vertical' }) 
         <button
           key={platform.name}
           onClick={() => handleShare(platform.shareUrl)}
-          className={`${platform.color} text-white font-semibold rounded-lg transition-transform hover:scale-105 shadow-md flex items-center
-                      ${isVertical ? 'w-full max-w-[80px] h-16 flex-col justify-center' : 'py-2 px-4 gap-2'}`}
+          className={`${platform.color} text-white font-semibold transition-transform hover:scale-110 shadow-lg flex items-center
+                      ${isVertical ? 'w-12 h-12 rounded-full justify-center' : 'py-2 px-4 gap-2 rounded-lg'}`}
           aria-label={`Share on ${platform.name}`}
         >
-          <div className="w-5 h-5">{platform.icon}</div>
-          <span className={`${isVertical ? 'text-[10px] mt-1' : 'text-sm'}`}>{platform.label}</span>
+          {platform.icon}
+          {!isVertical && (<span className='text-sm'>{platform.label}</span>)}
         </button>
       ))}
     </div>
