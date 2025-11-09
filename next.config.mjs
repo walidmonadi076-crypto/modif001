@@ -12,6 +12,14 @@ const securityHeaders = [
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'Referrer-Policy',
+    value: 'no-referrer-when-downgrade',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: "frame-ancestors 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: *; frame-src 'self' *; connect-src 'self' *; img-src 'self' data: *; style-src 'self' 'unsafe-inline' *;",
   }
 ];
 

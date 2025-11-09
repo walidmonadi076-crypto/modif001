@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, Fragment } from 'react';
 import type { Game, BlogPost, Product, SocialLink } from '../types';
 
@@ -21,6 +20,7 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
   const [categories, setCategories] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState('');
+  const [galleryInput, setGalleryInput] = useState('');
 
   useEffect(() => {
     if (type === 'games') {
@@ -31,12 +31,11 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
 
   useEffect(() => {
     if (item) {
-      setFormData(item);
+      setFormData({ gallery: [], tags: [], ...item });
       if ('tags' in item && Array.isArray(item.tags)) {
         setIsFeatured(item.tags.includes('Featured'));
       }
     } else {
-      // Default values for new items
       const defaults = {
         games: { title: '', imageUrl: '', category: '', tags: [], description: '', downloadUrl: '#', gallery: [] },
         blogs: { title: '', summary: '', imageUrl: '', author: '', rating: 4.5, content: '', category: '' },
@@ -49,7 +48,7 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
   }, [item, type]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     // @ts-ignore
     const isNumber = e.target.type === 'number';
     setFormData((prev: any) => ({ 
@@ -84,12 +83,38 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
     }));
   };
   
+  const addGalleryImage = () => {
+    const url = galleryInput.trim();
+    if (url && !formData.gallery?.includes(url)) {
+      try {
+        new URL(url); // Validate URL format
+        setFormData((prev: any) => ({ ...prev, gallery: [...(prev.gallery || []), url] }));
+        setGalleryInput('');
+      } catch (e) {
+        alert("Veuillez entrer une URL valide.");
+      }
+    }
+  };
+
+  const handleGalleryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addGalleryImage();
+    }
+  };
+
+  const removeGalleryImage = (urlToRemove: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      gallery: prev.gallery.filter((url: string) => url !== urlToRemove),
+    }));
+  };
+
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
     let finalData = { ...formData };
     if (type === 'games') {
         let finalTags = finalData.tags || [];
-        // Ensure we don't duplicate the Featured tag if it was manually added
         finalTags = finalTags.filter((t: string) => t !== 'Featured');
         if (isFeatured) {
             finalTags.push('Featured');
@@ -119,66 +144,49 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
         </div>
       );
   }
+
+  const renderGalleryManager = () => (
+    <div>
+        <label htmlFor="gallery" className="block text-sm font-medium text-gray-300 mb-1">Galerie d'images (URLs)</label>
+        <div className="flex gap-2">
+            <input id="gallery" name="gallery" type="url" value={galleryInput} onChange={(e) => setGalleryInput(e.target.value)} onKeyDown={handleGalleryKeyDown} className="flex-grow px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Coller une URL d'image et appuyez sur Entrée..."/>
+            <button type="button" onClick={addGalleryImage} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-semibold">Ajouter</button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2 p-2 bg-gray-900 rounded-md min-h-[6.5rem]">
+            {formData.gallery?.map((url: string, index: number) => (
+                <div key={index} className="relative group">
+                    <img src={url} alt={`Galerie ${index + 1}`} className="w-24 h-24 object-cover rounded-md" />
+                    <button type="button" onClick={() => removeGalleryImage(url)} className="absolute top-0 right-0 m-1 w-6 h-6 bg-red-600/80 text-white rounded-full flex items-center justify-center text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Supprimer l'image">&times;</button>
+                </div>
+            ))}
+        </div>
+    </div>
+  );
   
   const renderGameFields = () => (
     <>
       {renderField('title', 'Titre')}
-      {renderField('imageUrl', 'URL de l\'image')}
+      {renderField('imageUrl', 'URL de l\'image principale (Vignette)')}
       <div>
         <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-1">Catégorie</label>
-        <input
-          id="category"
-          name="category"
-          list="category-list"
-          value={formData.category || ''}
-          onChange={handleChange}
-          required
-          className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
-        <datalist id="category-list">
-          {categories.map(cat => <option key={cat} value={cat} />)}
-        </datalist>
+        <input id="category" name="category" list="category-list" value={formData.category || ''} onChange={handleChange} required className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+        <datalist id="category-list">{categories.map(cat => <option key={cat} value={cat} />)}</datalist>
       </div>
       <div>
         <label htmlFor="tags" className="block text-sm font-medium text-gray-300 mb-1">Tags</label>
         <div className="flex flex-wrap gap-2 p-2 bg-gray-700 rounded-md border border-gray-600">
-            {formData.tags?.filter((t:string) => t !== 'Featured').map((tag: string) => (
-                <span key={tag} className="flex items-center bg-purple-600 text-white text-sm font-medium px-2 py-1 rounded-full">
-                    {tag}
-                    <button type="button" onClick={() => removeTag(tag)} className="ml-2 text-purple-200 hover:text-white">&times;</button>
-                </span>
-            ))}
-            <input
-              id="tags"
-              name="tags"
-              type="text"
-              list="tag-list"
-              value={currentTag}
-              onChange={handleTagChange}
-              onKeyDown={handleTagKeyDown}
-              onBlur={() => addTag()}
-              className="flex-grow bg-transparent focus:outline-none"
-              placeholder="Ajouter un tag..."
-            />
-            <datalist id="tag-list">
-                {tags.filter(t => !formData.tags?.includes(t)).map(tag => <option key={tag} value={tag} />)}
-            </datalist>
+            {formData.tags?.filter((t:string) => t !== 'Featured').map((tag: string) => (<span key={tag} className="flex items-center bg-purple-600 text-white text-sm font-medium px-2 py-1 rounded-full">{tag}<button type="button" onClick={() => removeTag(tag)} className="ml-2 text-purple-200 hover:text-white">&times;</button></span>))}
+            <input id="tags" name="tags" type="text" list="tag-list" value={currentTag} onChange={handleTagChange} onKeyDown={handleTagKeyDown} onBlur={() => addTag()} className="flex-grow bg-transparent focus:outline-none" placeholder="Ajouter un tag..."/>
+            <datalist id="tag-list">{tags.filter(t => !formData.tags?.includes(t)).map(tag => <option key={tag} value={tag} />)}</datalist>
         </div>
       </div>
       <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 cursor-pointer">
-            <input
-                type="checkbox"
-                checked={isFeatured}
-                onChange={(e) => setIsFeatured(e.target.checked)}
-                className="w-4 h-4 bg-gray-700 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
-            />
-            Featured
-          </label>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 cursor-pointer"><input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="w-4 h-4 bg-gray-700 rounded border-gray-600 text-purple-600 focus:ring-purple-500"/>Featured</label>
       </div>
       {renderField('description', 'Description', 'textarea')}
       {renderField('downloadUrl', 'URL de Téléchargement', 'url')}
       {renderField('videoUrl', 'URL Vidéo (Optionnel)', 'url', false)}
+      {renderGalleryManager()}
     </>
   );
 
@@ -191,18 +199,7 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
       {renderField('category', 'Catégorie')}
        <div>
         <label htmlFor="rating" className="block text-sm font-medium text-gray-300 mb-1">Note (sur 5)</label>
-        <input
-            id="rating"
-            name="rating"
-            type="number"
-            value={formData.rating || ''}
-            onChange={handleChange}
-            step="0.1"
-            min="0"
-            max="5"
-            required
-            className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
+        <input id="rating" name="rating" type="number" value={formData.rating || ''} onChange={handleChange} step="0.1" min="0" max="5" required className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"/>
       </div>
       {renderField('content', 'Contenu', 'textarea')}
       {renderField('affiliateUrl', 'URL d\'affiliation', 'url', false)}
@@ -214,10 +211,11 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
     <>
       {renderField('name', 'Nom')}
       {renderField('price', 'Prix')}
-      {renderField('imageUrl', 'URL de l\'image')}
+      {renderField('imageUrl', 'URL de l\'image principale')}
       {renderField('url', 'URL du produit')}
       {renderField('category', 'Catégorie')}
       {renderField('description', 'Description', 'textarea')}
+      {renderGalleryManager()}
     </>
   );
 
@@ -227,16 +225,7 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
       {renderField('url', 'URL (lien complet)')}
       <div>
         <label htmlFor="icon_svg" className="block text-sm font-medium text-gray-300 mb-1">Icône (code SVG)</label>
-        <textarea
-            id="icon_svg"
-            name="icon_svg"
-            value={formData.icon_svg || ''}
-            onChange={handleChange}
-            required
-            rows={5}
-            className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
-            placeholder='<svg width="24" height="24" ...>...</svg>'
-        />
+        <textarea id="icon_svg" name="icon_svg" value={formData.icon_svg || ''} onChange={handleChange} required rows={5} className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm" placeholder='<svg width="24" height="24" ...>...</svg>'/>
         <p className="text-xs text-gray-400 mt-1">Collez le code SVG complet de l'icône ici. Pour un affichage optimal, utilisez une icône de 24x24 pixels.</p>
       </div>
     </>
@@ -255,7 +244,7 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
             {type === 'products' && renderProductFields()}
             {type === 'social-links' && renderSocialLinkFields()}
             
-            <div className="p-6 border-t border-gray-700 mt-auto flex justify-end gap-4 -mx-6 -mb-6">
+            <div className="pt-6 border-t border-gray-700 flex justify-end gap-4">
                 <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md">Annuler</button>
                 <button type="submit" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md">Sauvegarder</button>
             </div>

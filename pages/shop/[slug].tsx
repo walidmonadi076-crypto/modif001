@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -7,12 +8,24 @@ import { getProductBySlug, getAllProducts } from '../../lib/data';
 import type { Product } from '../../types';
 import Ad from '../../components/Ad';
 import SEO from '../../components/SEO';
+import Lightbox from '../../components/Lightbox';
 
 interface ProductDetailPageProps { product: Product; }
 
 const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
     const router = useRouter();
     const [mainImage, setMainImage] = useState<string>('');
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+
+    const mediaItems = useMemo(() => 
+        product.gallery.map(img => ({ type: 'image' as const, src: img }))
+    , [product.gallery]);
+
+    const openLightbox = (index: number) => {
+        setLightboxIndex(index);
+        setLightboxOpen(true);
+    };
 
     useEffect(() => {
         if (product) setMainImage(product.gallery[0] || product.imageUrl);
@@ -36,6 +49,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
             "availability": "https://schema.org/InStock"
         }
     };
+    
+    const mainImageIndex = product.gallery.findIndex(img => img === mainImage);
 
     return (
         <>
@@ -52,12 +67,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
                     <div>
-                        <div className="bg-gray-800 rounded-2xl overflow-hidden mb-4 aspect-square relative">
+                        <button className="bg-gray-800 rounded-2xl overflow-hidden mb-4 aspect-square relative w-full group" onClick={() => openLightbox(mainImageIndex > -1 ? mainImageIndex : 0)}>
                            {mainImage && <Image src={mainImage} alt={product.name} fill sizes="100vw" className="object-cover" />}
-                        </div>
+                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                            </div>
+                        </button>
                         <div className="flex gap-2">
                             {product.gallery.map((img, index) => (
-                                <button key={index} onClick={() => setMainImage(img)} className={`w-1/4 rounded-lg overflow-hidden aspect-square border-2 relative ${mainImage === img ? 'border-purple-500' : 'border-transparent'}`}>
+                                <button key={index} onClick={() => setMainImage(img)} className={`w-1/4 rounded-lg overflow-hidden aspect-square border-2 relative ${mainImage === img ? 'border-purple-500' : 'border-transparent hover:border-gray-500'}`}>
                                     <Image src={img} alt={`${product.name} thumbnail ${index + 1}`} fill sizes="25vw" className="object-cover" />
                                 </button>
                             ))}
@@ -76,6 +94,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
                     </div>
                 </div>
             </div>
+            {lightboxOpen && (
+                <Lightbox
+                    items={mediaItems}
+                    startIndex={lightboxIndex}
+                    onClose={() => setLightboxOpen(false)}
+                />
+            )}
         </>
     );
 };
@@ -83,7 +108,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product }) => {
 export const getStaticPaths: GetStaticPaths = async () => {
     const products = await getAllProducts();
     const paths = products
-        .filter(product => product && product.slug && typeof product.slug === 'string') // Ensures only products with valid string slugs are processed
+        .filter(product => product && product.slug && typeof product.slug === 'string')
         .map(product => ({
             params: { slug: product.slug },
         }));

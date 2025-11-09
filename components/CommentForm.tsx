@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import type { Comment } from '../types';
 
 declare global {
@@ -24,14 +25,49 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const [recaptchaWidgetId, setRecaptchaWidgetId] = useState<number | null>(null);
+
   useEffect(() => {
     window.onRecaptchaSuccess = (token: string) => setRecaptchaToken(token);
     window.onRecaptchaExpired = () => setRecaptchaToken(null);
+
+    const renderRecaptcha = () => {
+      if (recaptchaRef.current && typeof window.grecaptcha?.render === 'function') {
+        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+          'sitekey': '6Lcm1QUsAAAAAP4bS9QiKH9jCpDXQ3ktJsgQwcO4', // Google's public v2 test key
+          'callback': 'onRecaptchaSuccess',
+          'expired-callback': 'onRecaptchaExpired',
+          'theme': 'dark'
+        });
+        setRecaptchaWidgetId(widgetId);
+      }
+    };
+
+    if (window.grecaptcha && window.grecaptcha.ready) {
+      window.grecaptcha.ready(renderRecaptcha);
+    } else {
+      const intervalId = setInterval(() => {
+        if (window.grecaptcha && window.grecaptcha.ready) {
+          clearInterval(intervalId);
+          window.grecaptcha.ready(renderRecaptcha);
+        }
+      }, 100);
+      return () => clearInterval(intervalId);
+    }
+
     return () => {
       window.onRecaptchaSuccess = undefined;
       window.onRecaptchaExpired = undefined;
     };
   }, []);
+  
+  const resetRecaptcha = () => {
+    if (window.grecaptcha && recaptchaWidgetId !== null) {
+      window.grecaptcha.reset(recaptchaWidgetId);
+    }
+    setRecaptchaToken(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,15 +96,13 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
       setEmail("");
       setPhone("");
       setText("");
-      setRecaptchaToken(null);
-      window.grecaptcha?.reset();
-
+      resetRecaptcha();
+      
       onCommentAdded(data);
       setTimeout(() => setSuccess(null), 6000);
     } catch (err) {
       setError((err as Error).message);
-      window.grecaptcha?.reset();
-      setRecaptchaToken(null);
+      resetRecaptcha();
     } finally {
       setIsLoading(false);
     }
@@ -101,8 +135,8 @@ const CommentForm: React.FC<CommentFormProps> = ({ postId, onCommentAdded }) => 
         <textarea id="text" value={text} onChange={(e) => setText(e.target.value)} required rows={5} className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" />
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="g-recaptcha" data-sitekey="6Lcm1QUsAAAAAP4bS9QiKH9jCpDXQ3ktJsgQwcO4" data-callback="onRecaptchaSuccess" data-expired-callback="onRecaptchaExpired" data-theme="dark"></div>
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+        <div ref={recaptchaRef} className="transform scale-[0.85] sm:scale-100 origin-left sm:origin-center"></div>
         <button type="submit" disabled={isLoading || !recaptchaToken} className="px-6 py-2 w-full sm:w-auto bg-purple-600 hover:bg-purple-700 rounded-md font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
           {isLoading ? "Submitting..." : "Post Comment"}
         </button>

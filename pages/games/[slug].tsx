@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -7,6 +8,7 @@ import { getGameBySlug, getAllGames } from '../../lib/data';
 import type { Game } from '../../types';
 import Ad from '../../components/Ad';
 import SEO from '../../components/SEO';
+import Lightbox from '../../components/Lightbox';
 
 declare global {
     interface Window { 
@@ -21,24 +23,39 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
     const router = useRouter();
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [isOgadsReady, setIsOgadsReady] = useState(false);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+
+    const mediaItems = useMemo(() => {
+        const items = [];
+        if (game.videoUrl) {
+            items.push({ type: 'video' as const, src: game.videoUrl });
+        }
+        game.gallery.forEach(img => {
+            items.push({ type: 'image' as const, src: img });
+        });
+        if (items.length === 0 && game.imageUrl) {
+            items.push({ type: 'image' as const, src: game.imageUrl });
+        }
+        return items;
+    }, [game]);
+    
+    const openLightbox = (index: number) => {
+        setLightboxIndex(index);
+        setLightboxOpen(true);
+    };
 
     useEffect(() => {
-        // Define the function that OGAds will call upon successful completion of an offer.
         const handleUnlock = () => {
             console.log("OGAds locker unlocked! Enabling download button.");
             setIsUnlocked(true);
         };
-
-        // Attach the function to the window object to make it globally accessible for the OGAds script.
         window.onLockerUnlock = handleUnlock;
-
-        // Clean up the global function when the component unmounts to avoid memory leaks.
         return () => {
             delete window.onLockerUnlock;
         };
     }, []);
 
-    // Effect to check for the OGAds script and update readiness state.
     useEffect(() => {
         if (typeof window.og_load === 'function') {
             setIsOgadsReady(true);
@@ -50,9 +67,9 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
                 setIsOgadsReady(true);
                 clearInterval(intervalId);
             }
-        }, 200); // Poll every 200ms
+        }, 200);
 
-        return () => clearInterval(intervalId); // Cleanup on unmount
+        return () => clearInterval(intervalId);
     }, []);
 
 
@@ -72,13 +89,11 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
         "keywords": game.tags?.join(', ') || ''
     };
     
-    // This function is called when the user clicks the initial "Verify" button.
     const handleVerificationClick = () => {
         if (isOgadsReady && typeof window.og_load === 'function') {
-            window.og_load(); // Triggers the OGAds content locker.
+            window.og_load();
         } else {
             console.error("OGAds script (og_load) is not available.");
-            // Optionally, provide feedback to the user.
             alert("The verification service is currently unavailable. Please try again later.");
         }
     };
@@ -99,9 +114,12 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
                         <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-lg">
-                            <div className="aspect-video bg-black relative">
-                                {game.videoUrl ? <video src={game.videoUrl} controls autoPlay muted className="w-full h-full object-contain"></video> : <Image src={game.gallery[0] || game.imageUrl} alt={game.title} fill sizes="100vw" className="object-cover" />}
-                            </div>
+                            <button className="aspect-video bg-black relative w-full group" onClick={() => openLightbox(0)}>
+                                {game.videoUrl ? <video src={game.videoUrl} autoPlay muted loop className="w-full h-full object-contain"></video> : <Image src={game.gallery[0] || game.imageUrl} alt={game.title} fill sizes="100vw" className="object-cover" />}
+                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path></svg>
+                                </div>
+                            </button>
                             <div className="p-6">
                                 <h1 className="text-4xl font-extrabold text-white mb-3">{game.title}</h1>
                                 <div className="flex flex-wrap gap-2 mb-6">{game.tags?.map(tag => <span key={tag} className="text-xs font-semibold bg-gray-700 text-gray-300 px-2.5 py-1 rounded-full">{tag}</span>)}</div>
@@ -136,14 +154,22 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
                     <div className="space-y-8">
                         <h3 className="text-xl font-bold text-white border-b border-gray-700 pb-2">Screenshots</h3>
                         <div className="grid grid-cols-2 gap-4">{game.gallery.map((img, index) => (
-                            <div key={index} className="relative rounded-lg object-cover aspect-video overflow-hidden">
+                             <button key={index} className="relative rounded-lg object-cover aspect-video overflow-hidden group" onClick={() => openLightbox(game.videoUrl ? index + 1 : index)}>
                                 <Image src={img} alt={`${game.title} screenshot ${index + 1}`} fill sizes="50vw" className="object-cover" />
-                            </div>
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </button>
                         ))}</div>
                         <Ad placement="game_vertical" />
                     </div>
                 </div>
             </div>
+            {lightboxOpen && (
+                <Lightbox
+                    items={mediaItems}
+                    startIndex={lightboxIndex}
+                    onClose={() => setLightboxOpen(false)}
+                />
+            )}
         </>
     );
 };
@@ -151,7 +177,7 @@ const GameDetailPage: React.FC<GameDetailPageProps> = ({ game }) => {
 export const getStaticPaths: GetStaticPaths = async () => {
     const games = await getAllGames();
     const paths = games
-        .filter(game => game && game.slug && typeof game.slug === 'string') // Ensures only games with valid string slugs are processed
+        .filter(game => game && game.slug && typeof game.slug === 'string')
         .map(game => ({
             params: { slug: game.slug },
         }));

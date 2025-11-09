@@ -24,9 +24,14 @@ const config: Config = {
             transform: 'translateX(0)',
           },
         },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
       },
       animation: {
         'fade-in-right': 'fade-in-right 0.3s ease-out forwards',
+        'fade-in': 'fade-in 0.2s ease-out forwards',
       },
     },
   },
