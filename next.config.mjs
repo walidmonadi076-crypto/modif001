@@ -37,9 +37,9 @@ const securityHeaders = [
     value: 'max-age=63072000; includeSubDomains; preload',
   },
   {
-    // A sensible default that helps prevent referrer leakage while being compatible with ad networks.
+    // Use a less strict policy that is the browser default and more compatible with ad networks.
     key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin'
+    value: 'no-referrer-when-downgrade'
   },
   {
     // Apply the Content Security Policy to allow external ad scripts to load.
