@@ -4,13 +4,13 @@ import type { GetStaticProps } from 'next';
 import type { Game } from '../types';
 import { getAllGames } from '../lib/data';
 import GameCarousel from '../components/GameCarousel';
-import Image from 'next/image';
+import GameCard from '../components/GameCard';
 
 const Section: React.FC<{ title: string; children: React.ReactNode, viewMore?: boolean, onViewMore?: () => void }> = ({ title, children, viewMore = true, onViewMore }) => (
     <section className="mb-12">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-text">{title}</h2>
-        {viewMore && <button onClick={onViewMore} className="text-sm font-semibold text-accent hover:text-accent-600">View more</button>}
+        {viewMore && onViewMore && <button onClick={onViewMore} className="text-sm font-semibold text-accent hover:text-accent-600">View more</button>}
       </div>
       {children}
     </section>
@@ -23,27 +23,33 @@ interface HomeProps {
 const Home: React.FC<HomeProps> = ({ games }) => {
   const router = useRouter();
 
-  const sections = useMemo(() => {
-    const priorityOrder = ['Play on Comet', 'New', 'Hot', 'Updated', 'Top', 'Featured'];
-    // Fix: Explicitly type `allTags` as `string[]` to correct type inference issues.
-    const allTags: string[] = [...new Set(games.flatMap(game => game.tags || []))];
-    const priorityTags = priorityOrder.filter(tag => allTags.includes(tag));
-    const otherTags = allTags.filter(tag => !priorityOrder.includes(tag)).sort();
-    const orderedTags = [...priorityTags, ...otherTags];
+  const { topGames, featuredGames, otherSections } = useMemo(() => {
+    // Top games are those with the 'Top' tag.
+    const topGames = games.filter(g => g.tags?.includes('Top'));
+    
+    // Featured games are 'Play on Comet' games based on screenshot badges.
+    const featuredGames = games.filter(g => g.tags?.includes('Play on Comet'));
 
-    return orderedTags
+    // All other tags will get their own sections.
+    const usedTags = ['Top', 'Play on Comet'];
+    const otherTags = [...new Set(games.flatMap(game => game.tags || []))]
+      .filter(tag => tag && !usedTags.includes(tag)) // ensure tag is not empty or used
+      .sort();
+
+    const otherSections = otherTags
       .map(tag => {
         const sectionGames = games.filter(g => g.tags?.includes(tag));
-        const title = tag === 'Play on Comet' ? 'Play on Comet' : `${tag} Games`;
+        const title = `${tag} Games`; // e.g., "New Games"
         return {
           key: tag.toLowerCase().replace(/\s+/g, '-'),
           title: title,
           games: sectionGames,
-          carouselProps: { cardVariant: 'default' as const },
           tag: tag,
         };
       })
       .filter(section => section.games.length > 0);
+
+    return { topGames, featuredGames, otherSections };
   }, [games]);
 
   const handleViewMore = (tag: string) => {
@@ -54,31 +60,44 @@ const Home: React.FC<HomeProps> = ({ games }) => {
   };
 
   return (
-    <div className="space-y-8">
-        <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden mb-12">
-            <Image src="https://picsum.photos/seed/banner/1200/400" alt="Comet AI Browser" fill sizes="100vw" className="object-cover" priority />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent p-6 md:p-12 flex flex-col justify-center">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight">Welcome to<br />G2gaming</h2>
-                <p className="mt-2 text-base sm:text-lg text-gray-300">Your ultimate gaming destination.</p>
-                <button onClick={() => router.push('/games')} className="mt-6 bg-accent text-white font-bold py-2 px-5 text-base sm:py-3 sm:px-6 sm:text-lg rounded-lg w-fit hover:bg-accent-600 transition-colors">Explore Games</button>
-            </div>
-        </div>
+    <div className="space-y-4">
+        {topGames.length > 0 && (
+            <section className="mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-text">Top Games</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {topGames.map(game => (
+                  <GameCard key={game.id} game={game} variant="featured" />
+                ))}
+              </div>
+            </section>
+        )}
 
-        <div className="bg-gradient-to-r from-accent to-accent-600 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-6 my-12">
-            <div className="flex items-center space-x-4">
-                <div className="bg-yellow-400 p-2 rounded-lg relative"><span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-accent-600">1</span><svg className="w-8 h-8 text-yellow-900" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg></div>
-                <div><h3 className="text-lg sm:text-xl font-bold text-white">Climb the new G2gaming leaderboards</h3></div>
-            </div>
-            <button onClick={() => router.push('/games')} className="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-6 rounded-lg transition-colors flex-shrink-0">Explore games</button>
-        </div>
+        {featuredGames.length > 0 && (
+            <>
+                <Section 
+                    title="Featured Games"
+                    onViewMore={() => handleViewMore('Play on Comet')}
+                >
+                    <GameCarousel games={featuredGames} cardVariant="default" />
+                </Section>
+                {/* Decorative progress bar to match screenshot */}
+                <div className="relative -mt-8 mb-8 px-4 sm:px-6 lg:px-8">
+                    <div className="w-full bg-surface-alt rounded-full h-1.5 flex items-center">
+                        <div className="bg-accent h-1.5 rounded-full" style={{ width: '30%' }} />
+                    </div>
+                </div>
+            </>
+        )}
         
-        {sections.map(section => (
+        {otherSections.map(section => (
             <Section 
                 key={section.key} 
                 title={section.title} 
                 onViewMore={() => handleViewMore(section.tag)}
             >
-                <GameCarousel games={section.games} {...section.carouselProps} />
+                <GameCarousel games={section.games} cardVariant="default" />
             </Section>
         ))}
     </div>
