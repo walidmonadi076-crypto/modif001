@@ -75,3 +75,45 @@ export async function getGameBySlug(slug: string): Promise<Game | null> {
   `, [slug]);
   return result.rows.length > 0 ? result.rows[0] : null;
 }
+
+/* ========== ⚙️ SITE SETTINGS ========== */
+
+export interface SiteSettings {
+  site_name: string;
+  site_icon_url: string;
+  ogads_script_src: string;
+  hero_title: string;
+  hero_subtitle: string;
+  hero_button_text: string;
+  hero_button_url: string;
+  hero_bg_url: string;
+  promo_enabled: boolean;
+  promo_text: string;
+  promo_button_text: string;
+  promo_button_url: string;
+}
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  const result = await query('SELECT key, value FROM site_settings');
+  const settings = result.rows.reduce((acc, row) => {
+    acc[row.key] = row.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const parseBoolean = (value: string | undefined) => value === 'true';
+
+  return {
+    site_name: settings.site_name || 'G2gaming',
+    site_icon_url: settings.site_icon_url || '/favicon.ico',
+    ogads_script_src: settings.ogads_script_src || '',
+    hero_title: settings.hero_title || 'Welcome to<br />G2gaming',
+    hero_subtitle: settings.hero_subtitle || 'Your ultimate gaming destination.',
+    hero_button_text: settings.hero_button_text || 'Explore Games',
+    hero_button_url: settings.hero_button_url || '/games',
+    hero_bg_url: settings.hero_bg_url || 'https://picsum.photos/seed/banner/1200/400',
+    promo_enabled: parseBoolean(settings.promo_enabled ?? 'true'),
+    promo_text: settings.promo_text || 'Climb the new G2gaming leaderboards',
+    promo_button_text: settings.promo_button_text || 'Explore games',
+    promo_button_url: settings.promo_button_url || '/games',
+  };
+}

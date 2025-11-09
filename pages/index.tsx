@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useRouter } from 'next/router';
 import type { GetStaticProps } from 'next';
 import type { Game } from '../types';
-import { getAllGames } from '../lib/data';
+import { getAllGames, getSiteSettings, SiteSettings } from '../lib/data';
 import GameCarousel from '../components/GameCarousel';
 import Image from 'next/image';
 
@@ -18,14 +18,14 @@ const Section: React.FC<{ title: string; children: React.ReactNode, viewMore?: b
 
 interface HomeProps {
     games: Game[];
+    settings: SiteSettings;
 }
 
-const Home: React.FC<HomeProps> = ({ games }) => {
+const Home: React.FC<HomeProps> = ({ games, settings }) => {
   const router = useRouter();
 
   const sections = useMemo(() => {
     const priorityOrder = ['Play on Comet', 'New', 'Hot', 'Updated', 'Top', 'Featured'];
-    // Fix: Explicitly type `allTags` as `string[]` to correct type inference issues.
     const allTags: string[] = [...new Set(games.flatMap(game => game.tags || []))];
     const priorityTags = priorityOrder.filter(tag => allTags.includes(tag));
     const otherTags = allTags.filter(tag => !priorityOrder.includes(tag)).sort();
@@ -56,21 +56,23 @@ const Home: React.FC<HomeProps> = ({ games }) => {
   return (
     <div className="space-y-8">
         <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden mb-12">
-            <Image src="https://picsum.photos/seed/banner/1200/400" alt="Comet AI Browser" fill sizes="100vw" className="object-cover" priority />
+            <Image src={settings.hero_bg_url} alt="Welcome banner" fill sizes="100vw" className="object-cover" priority />
             <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent p-6 md:p-12 flex flex-col justify-center">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight">Welcome to<br />G2gaming</h2>
-                <p className="mt-2 text-base sm:text-lg text-gray-300">Your ultimate gaming destination.</p>
-                <button onClick={() => router.push('/games')} className="mt-6 bg-purple-600 text-white font-bold py-2 px-5 text-base sm:py-3 sm:px-6 sm:text-lg rounded-lg w-fit hover:bg-purple-700 transition-colors">Explore Games</button>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight" dangerouslySetInnerHTML={{ __html: settings.hero_title }} />
+                <p className="mt-2 text-base sm:text-lg text-gray-300">{settings.hero_subtitle}</p>
+                <button onClick={() => router.push(settings.hero_button_url)} className="mt-6 bg-purple-600 text-white font-bold py-2 px-5 text-base sm:py-3 sm:px-6 sm:text-lg rounded-lg w-fit hover:bg-purple-700 transition-colors">{settings.hero_button_text}</button>
             </div>
         </div>
 
-        <div className="bg-gradient-to-r from-purple-800 to-indigo-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-6 my-12">
-            <div className="flex items-center space-x-4">
-                <div className="bg-yellow-400 p-2 rounded-lg relative"><span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-purple-800">1</span><svg className="w-8 h-8 text-yellow-900" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg></div>
-                <div><h3 className="text-lg sm:text-xl font-bold">Climb the new G2gaming leaderboards</h3></div>
+        {settings.promo_enabled && (
+            <div className="bg-gradient-to-r from-purple-800 to-indigo-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-6 my-12">
+                <div className="flex items-center space-x-4">
+                    <div className="bg-yellow-400 p-2 rounded-lg relative"><span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-purple-800">1</span><svg className="w-8 h-8 text-yellow-900" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg></div>
+                    <div><h3 className="text-lg sm:text-xl font-bold">{settings.promo_text}</h3></div>
+                </div>
+                <button onClick={() => router.push(settings.promo_button_url)} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex-shrink-0">{settings.promo_button_text}</button>
             </div>
-            <button onClick={() => router.push('/games')} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex-shrink-0">Explore games</button>
-        </div>
+        )}
         
         {sections.map(section => (
             <Section 
@@ -86,10 +88,15 @@ const Home: React.FC<HomeProps> = ({ games }) => {
 };
 
 export const getStaticProps: GetStaticProps = async () => {
-    const games = await getAllGames();
+    const [games, settings] = await Promise.all([
+        getAllGames(),
+        getSiteSettings(),
+    ]);
+
     return {
         props: {
             games,
+            settings,
         },
         revalidate: 60,
     };

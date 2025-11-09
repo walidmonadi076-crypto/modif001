@@ -1,6 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Ad } from '../types';
+import type { SiteSettings } from '../lib/data';
 
 // --- AD CONTEXT ---
 
@@ -90,5 +90,45 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
+  );
+};
+
+// --- SETTINGS CONTEXT ---
+
+const defaultSettings: SiteSettings = {
+  site_name: 'G2gaming',
+  site_icon_url: '/favicon.ico',
+  ogads_script_src: '',
+  hero_title: 'Welcome to<br />G2gaming',
+  hero_subtitle: 'Your ultimate gaming destination.',
+  hero_button_text: 'Explore Games',
+  hero_button_url: '/games',
+  hero_bg_url: 'https://picsum.photos/seed/banner/1200/400',
+  promo_enabled: true,
+  promo_text: 'Climb the new G2gaming leaderboards',
+  promo_button_text: 'Explore games',
+  promo_button_url: '/games',
+};
+
+interface SettingsContextType {
+  settings: SiteSettings;
+}
+
+const SettingsContext = createContext<SettingsContextType>({
+  settings: defaultSettings,
+});
+
+export const useSettings = () => useContext(SettingsContext);
+
+interface SettingsProviderProps {
+  children: ReactNode;
+  value: SiteSettings;
+}
+
+export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children, value }) => {
+  return (
+    <SettingsContext.Provider value={{ settings: value || defaultSettings }}>
+      {children}
+    </SettingsContext.Provider>
   );
 };

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import type { Game, BlogPost, Product, SocialLink, Ad, Comment } from '../../types';
+import type { SiteSettings } from '../../lib/data';
 import AdminDashboard from '../../components/AdminDashboard';
 import AdminForm from '../../components/AdminForm';
 import ToastContainer from '../../components/ToastContainer';
@@ -52,7 +53,7 @@ export default function AdminPanel() {
   const [items, setItems] = useState<Item[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [ads, setAds] = useState<Record<string, string>>({});
-  const [ogadsScript, setOgadsScript] = useState('');
+  const [settings, setSettings] = useState<Partial<SiteSettings>>({});
   
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -115,7 +116,7 @@ export default function AdminPanel() {
         setStats(statsData);
         const adsObject = adsData.reduce((acc: Record<string, string>, ad: Ad) => ({ ...acc, [ad.placement]: ad.code || '' }), {});
         setAds(adsObject);
-        setOgadsScript(settingsData.ogads_script_src || '');
+        setSettings(settingsData);
       } catch (error) {
         console.error('Error fetching initial admin data:', error);
         addToast('Erreur de chargement des données initiales.', 'error');
@@ -268,7 +269,7 @@ export default function AdminPanel() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-        body: JSON.stringify({ ogads_script_src: ogadsScript })
+        body: JSON.stringify(settings)
       });
       if (res.ok) {
         addToast('Paramètres sauvegardés!', 'success');
@@ -279,6 +280,13 @@ export default function AdminPanel() {
     } catch (error) {
       addToast('Erreur lors de la sauvegarde des paramètres.', 'error');
     }
+  };
+
+  const handleSettingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const isCheckbox = type === 'checkbox';
+    // @ts-ignore
+    setSettings(prev => ({ ...prev, [name]: isCheckbox ? e.target.checked : value }));
   };
   
   const requestSort = (key: string) => {
@@ -319,7 +327,7 @@ export default function AdminPanel() {
     { id: 'social-links', label: 'Social-Links', count: stats?.totalSocialLinks },
     { id: 'comments', label: 'Comments', count: stats?.totalComments },
     { id: 'ads', label: 'Ads', count: stats?.totalAds },
-    { id: 'settings', label: 'Settings' }
+    { id: 'settings', label: 'Personnalisation' }
   ];
   
   const SortableHeader: React.FC<{ label: string; columnKey: string; className?: string }> = ({ label, columnKey, className }) => {
@@ -331,6 +339,17 @@ export default function AdminPanel() {
       </th>
     );
   };
+
+  const renderSettingInput = (name: keyof SiteSettings, label: string, type: 'text' | 'url' | 'textarea' = 'text', rows?: number) => (
+    <div>
+        <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
+        {type === 'textarea' ? (
+            <textarea id={name} name={name} value={settings[name] as string || ''} onChange={handleSettingChange} rows={rows || 3} className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+        ) : (
+            <input id={name} name={name} type={type} value={settings[name] as string || ''} onChange={handleSettingChange} className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+        )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -364,19 +383,48 @@ export default function AdminPanel() {
                 <div className="flex justify-end"><button onClick={handleSaveAds} className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-md font-semibold transition-colors">Sauvegarder les Publicités</button></div>
               </div>
             ) : activeTab === 'settings' ? (
-              <div className="bg-gray-800 rounded-lg p-6 space-y-6">
-                <div>
-                  <label htmlFor="ogads-script" className="block text-lg font-semibold text-gray-200 mb-2">Script OGAds</label>
-                  <textarea
-                    id="ogads-script"
-                    value={ogadsScript}
-                    onChange={(e) => setOgadsScript(e.target.value)}
-                    rows={4}
-                    className="w-full px-3 py-2 bg-gray-700 rounded-md border border-gray-600 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder='<script type="text/javascript" id="ogjs" src="..."></script>'
-                  />
-                  <p className="text-xs text-gray-400 mt-2">Collez ici le code `&lt;script&gt;` complet fourni par OGAds. Le système le sauvegardera tel quel.</p>
-                </div>
+              <div className="bg-gray-800 rounded-lg p-6 space-y-8">
+                <section>
+                    <h3 className="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Paramètres Généraux</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {renderSettingInput('site_name', 'Nom du Site')}
+                        {renderSettingInput('site_icon_url', 'URL du Favicon', 'url')}
+                    </div>
+                </section>
+                 <section>
+                    <h3 className="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Bannière d'Accueil (Hero)</h3>
+                    <div className="space-y-4">
+                        {renderSettingInput('hero_title', 'Titre (HTML autorisé)', 'textarea')}
+                        {renderSettingInput('hero_subtitle', 'Sous-titre')}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {renderSettingInput('hero_button_text', 'Texte du bouton')}
+                            {renderSettingInput('hero_button_url', 'URL du bouton')}
+                        </div>
+                        {renderSettingInput('hero_bg_url', 'URL de l\'image de fond', 'url')}
+                    </div>
+                </section>
+                <section>
+                    <h3 className="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Bannière Promotionnelle</h3>
+                    <div className="flex items-center gap-4 mb-4">
+                        <input type="checkbox" id="promo_enabled" name="promo_enabled" checked={!!settings.promo_enabled} onChange={handleSettingChange} className="h-5 w-5 bg-gray-700 rounded border-gray-600 text-purple-600 focus:ring-purple-500" />
+                        <label htmlFor="promo_enabled" className="text-lg font-medium text-gray-200">Activer la bannière promotionnelle</label>
+                    </div>
+                    {settings.promo_enabled && (
+                        <div className="space-y-4">
+                            {renderSettingInput('promo_text', 'Texte de la promo')}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {renderSettingInput('promo_button_text', 'Texte du bouton promo')}
+                                {renderSettingInput('promo_button_url', 'URL du bouton promo')}
+                            </div>
+                        </div>
+                    )}
+                </section>
+                <section>
+                    <h3 className="text-xl font-bold border-b border-gray-700 pb-2 mb-4">Script OGAds</h3>
+                    {renderSettingInput('ogads_script_src', 'Script OGAds', 'textarea', 4)}
+                    <p className="text-xs text-gray-400 mt-2">Collez ici le code `&lt;script&gt;` complet fourni par OGAds.</p>
+                </section>
+
                 <div className="flex justify-end"><button onClick={handleSaveSettings} className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-md font-semibold transition-colors">Sauvegarder les Paramètres</button></div>
               </div>
             ) : (

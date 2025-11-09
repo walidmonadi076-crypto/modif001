@@ -1,45 +1,61 @@
-
 import Document, { Html, Head, Main, NextScript, DocumentContext, DocumentInitialProps } from 'next/document';
-import type { ReactElement, ReactNode } from 'react';
+import { getSiteSettings } from '../lib/data';
 
-interface MyDocumentProps {
+interface MyDocumentProps extends DocumentInitialProps {
+  siteIconUrl: string;
   ogadsScriptUrl: string | null;
 }
 
-class MyDocument extends Document {
-  static async getInitialProps(ctx: DocumentContext) {
+class MyDocument extends Document<MyDocumentProps> {
+  static async getInitialProps(ctx: DocumentContext): Promise<MyDocumentProps> {
     const initialProps = await Document.getInitialProps(ctx);
-    let ogadsScriptUrl: string | null = null;
-    
     try {
-      // Use the internal host for server-side fetching, or fallback for local dev
-      const host = ctx.req?.headers.host || 'localhost:5000';
-      const protocol = host.startsWith('localhost') ? 'http' : 'https';
-      const res = await fetch(`${protocol}://${host}/api/settings/ogads-script`);
+      const settings = await getSiteSettings();
+      let scriptUrl: string | null = null;
 
-      if (res.ok) {
-        const data = await res.json();
-        ogadsScriptUrl = data.scriptUrl;
+      if (settings.ogads_script_src) {
+        // Use a regex to extract the src attribute's value from the full script tag
+        const srcMatch = settings.ogads_script_src.match(/src=["']([^"']+)["']/);
+        if (srcMatch && srcMatch[1]) {
+          scriptUrl = srcMatch[1];
+        }
       }
+
+      return { 
+        ...initialProps,
+        ogadsScriptUrl: scriptUrl,
+        siteIconUrl: settings.site_icon_url,
+      };
     } catch (error) {
-      console.error('Failed to fetch OGAds script URL:', error);
+      console.error('Failed to fetch site settings in _document:', error);
+      // Fallback values to prevent site crash on error
+      return { 
+        ...initialProps,
+        ogadsScriptUrl: null,
+        siteIconUrl: '/favicon.ico',
+      };
     }
-    
-    return { ...initialProps, ogadsScriptUrl };
   }
 
   render() {
-    // FIX: The type of `this.props` in a custom Document is complex, and TypeScript
-    // struggles to correctly infer the props added from `getInitialProps`.
-    // Casting to `unknown` first resolves the type error, allowing access to custom props.
-    const { ogadsScriptUrl } = this.props as unknown as MyDocumentProps;
+    const { ogadsScriptUrl, siteIconUrl } = this.props;
     
     return (
       <Html lang="en" className="font-sans">
         <Head>
           <meta charSet="UTF-8" />
-          <link rel="icon" type="image/x-icon" href="/favicon.ico" />
           
+          {/* Favicon links - A modern, comprehensive set for all devices */}
+          <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+          <link rel="manifest" href="/site.webmanifest" />
+          <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#7c3aed" />
+          <meta name="msapplication-TileColor" content="#603cba" />
+          <meta name="theme-color" content="#ffffff" />
+          {/* Use the dynamically fetched favicon URL */}
+          <link rel="icon" href={siteIconUrl} />
+
           {/* OGAds Content Locker Script - Injected server-side for reliability */}
           {ogadsScriptUrl && (
             <script

@@ -1,21 +1,27 @@
-
-
 import React, { useState, useEffect } from 'react';
-import type { AppProps } from 'next/app';
+import type { AppProps, AppContext } from 'next/app';
+import App from 'next/app';
 import { useRouter } from 'next/router';
 import { Inter } from 'next/font/google';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import '../styles/globals.css';
 import type { SocialLink } from '@/types';
-import { AdProvider, ThemeProvider } from '../contexts/AdContext';
+import { AdProvider, ThemeProvider, SettingsProvider } from '../contexts/AdContext';
+import { getSiteSettings, SiteSettings } from '../lib/data';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
 });
 
-function MyApp({ Component, pageProps }: AppProps) {
+type MyAppProps = AppProps & {
+  pageProps: {
+    settings: SiteSettings;
+  };
+};
+
+function MyApp({ Component, pageProps }: MyAppProps) {
   const router = useRouter();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -41,8 +47,6 @@ function MyApp({ Component, pageProps }: AppProps) {
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     const searchablePages = ['/games', '/blog', '/shop'];
-    // If the user starts searching on a page that doesn't display search results (like the homepage or a detail page),
-    // redirect them to the main games page to show the results.
     if (query && !searchablePages.includes(router.pathname)) {
       router.push('/games');
     }
@@ -61,42 +65,70 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider>
       <AdProvider>
-        <div className={`bg-gray-900 text-white min-h-screen flex ${inter.variable} font-sans`}>
-          {isMobileSidebarOpen && (
-            <div
-              className="fixed inset-0 bg-black/60 z-50 md:hidden"
-              onClick={() => setIsMobileSidebarOpen(false)}
-              aria-hidden="true"
-            ></div>
-          )}
-          <Sidebar
-            isExpanded={isSidebarExpanded}
-            onMouseEnter={() => setIsSidebarExpanded(true)}
-            onMouseLeave={() => setIsSidebarExpanded(false)}
-            isMobileOpen={isMobileSidebarOpen}
-            onMobileClose={() => setIsMobileSidebarOpen(false)}
-          />
-          <div
-            className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-              isSidebarExpanded ? 'md:ml-64' : 'md:ml-20'
-            }`}
-          >
-            <Header
-              searchQuery={searchQuery}
-              onSearchChange={handleSearchChange}
-              onSearchFocus={() => setSearchActive(true)}
-              onSearchBlur={() => setTimeout(() => setSearchActive(false), 200)}
-              onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-              socialLinks={socialLinks}
+        <SettingsProvider value={pageProps.settings}>
+          <div className={`bg-gray-900 text-white min-h-screen flex ${inter.variable} font-sans`}>
+            {isMobileSidebarOpen && (
+              <div
+                className="fixed inset-0 bg-black/60 z-50 md:hidden"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                aria-hidden="true"
+              ></div>
+            )}
+            <Sidebar
+              isExpanded={isSidebarExpanded}
+              onMouseEnter={() => setIsSidebarExpanded(true)}
+              onMouseLeave={() => setIsSidebarExpanded(false)}
+              isMobileOpen={isMobileSidebarOpen}
+              onMobileClose={() => setIsMobileSidebarOpen(false)}
             />
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
-              <Component {...enhancedPageProps} />
-            </main>
+            <div
+              className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+                isSidebarExpanded ? 'md:ml-64' : 'md:ml-20'
+              }`}
+            >
+              <Header
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
+                onSearchFocus={() => setSearchActive(true)}
+                onSearchBlur={() => setTimeout(() => setSearchActive(false), 200)}
+                onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                socialLinks={socialLinks}
+              />
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
+                <Component {...enhancedPageProps} />
+              </main>
+            </div>
           </div>
-        </div>
+        </SettingsProvider>
       </AdProvider>
     </ThemeProvider>
   );
 }
+
+MyApp.getInitialProps = async (appContext: AppContext) => {
+  const appProps = await App.getInitialProps(appContext);
+  try {
+    const settings = await getSiteSettings();
+    appProps.pageProps.settings = settings;
+  } catch (e) {
+    console.error("Could not fetch site settings in _app", e);
+    // Provide default settings if the fetch fails to prevent crash
+    appProps.pageProps.settings = {
+      site_name: 'G2gaming',
+      site_icon_url: '/favicon.ico',
+      ogads_script_src: '',
+      hero_title: 'Welcome to G2gaming',
+      hero_subtitle: 'Your ultimate gaming destination.',
+      hero_button_text: 'Explore Games',
+      hero_button_url: '/games',
+      hero_bg_url: '',
+      promo_enabled: false,
+      promo_text: '',
+      promo_button_text: '',
+      promo_button_url: ''
+    };
+  }
+  return appProps;
+};
 
 export default MyApp;
