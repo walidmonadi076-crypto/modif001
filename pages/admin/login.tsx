@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
-import type { Game, BlogPost, Product, SocialLink, Ad, Comment } from '../../types';
-import type { SiteSettings } from '../../lib/data';
+import type { Game, BlogPost, Product, SocialLink, Ad, Comment, SiteSettings } from '../../types';
 import AdminDashboard from '../../components/AdminDashboard';
 import AdminForm from '../../components/AdminForm';
 import ToastContainer from '../../components/ToastContainer';

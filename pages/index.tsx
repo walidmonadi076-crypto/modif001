@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { useRouter } from 'next/router';
 import type { GetStaticProps } from 'next';
-import type { Game } from '../types';
-import { getAllGames, getSiteSettings, SiteSettings } from '../lib/data';
+import type { Game, SiteSettings } from '../types';
+import { getAllGames, getSiteSettings } from '../lib/data';
 import GameCarousel from '../components/GameCarousel';
 import Image from 'next/image';
 

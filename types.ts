@@ -66,3 +66,18 @@ export interface Ad {
   placement: string;
   code: string;
 }
+
+export interface SiteSettings {
+  site_name: string;
+  site_icon_url: string;
+  ogads_script_src: string;
+  hero_title: string;
+  hero_subtitle: string;
+  hero_button_text: string;
+  hero_button_url: string;
+  hero_bg_url: string;
+  promo_enabled: boolean;
+  promo_text: string;
+  promo_button_text: string;
+  promo_button_url: string;
+}

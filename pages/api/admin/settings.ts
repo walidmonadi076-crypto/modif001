@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getDbClient } from '../../../db';
 import { isAuthorized } from '../auth/check';
-import { getSiteSettings, SiteSettings } from '../../../lib/data';
+import { getSiteSettings } from '../../../lib/data';
+import type { SiteSettings } from '../../../types';
 
 const SETTING_KEYS = [
   'site_name', 'site_icon_url', 'ogads_script_src',

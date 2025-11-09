@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { Ad } from '../types';
-import type { SiteSettings } from '../lib/data';
+import type { Ad, SiteSettings } from '../types';
 
 // --- AD CONTEXT ---
 

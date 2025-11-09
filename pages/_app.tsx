@@ -6,9 +6,8 @@ import { Inter } from 'next/font/google';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import '../styles/globals.css';
-import type { SocialLink } from '@/types';
+import type { SocialLink, SiteSettings } from '@/types';
 import { AdProvider, ThemeProvider, SettingsProvider } from '../contexts/AdContext';
-import { getSiteSettings, SiteSettings } from '../lib/data';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -108,8 +107,18 @@ function MyApp({ Component, pageProps }: MyAppProps) {
 MyApp.getInitialProps = async (appContext: AppContext) => {
   const appProps = await App.getInitialProps(appContext);
   try {
-    const settings = await getSiteSettings();
+    const isServer = !!appContext.ctx.req;
+    const host = isServer ? appContext.ctx.req?.headers.host : window.location.host;
+    const protocol = host?.startsWith('localhost') ? 'http:' : 'https:';
+    const baseUrl = `${protocol}//${host}`;
+    
+    const settingsRes = await fetch(`${baseUrl}/api/settings`);
+    if (!settingsRes.ok) {
+        throw new Error(`Failed to fetch settings: ${settingsRes.statusText}`);
+    }
+    const settings = await settingsRes.json();
     appProps.pageProps.settings = settings;
+
   } catch (e) {
     console.error("Could not fetch site settings in _app", e);
     // Provide default settings if the fetch fails to prevent crash

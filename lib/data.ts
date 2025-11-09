@@ -1,6 +1,6 @@
 // lib/data.ts
 import { query } from '../db';
-import type { BlogPost, Comment, Product, Game } from '../types';
+import type { BlogPost, Comment, Product, Game, SiteSettings } from '../types';
 
 /* ========== 📰 BLOG POSTS ========== */
 
@@ -77,21 +77,6 @@ export async function getGameBySlug(slug: string): Promise<Game | null> {
 }
 
 /* ========== ⚙️ SITE SETTINGS ========== */
-
-export interface SiteSettings {
-  site_name: string;
-  site_icon_url: string;
-  ogads_script_src: string;
-  hero_title: string;
-  hero_subtitle: string;
-  hero_button_text: string;
-  hero_button_url: string;
-  hero_bg_url: string;
-  promo_enabled: boolean;
-  promo_text: string;
-  promo_button_text: string;
-  promo_button_url: string;
-}
 
 export async function getSiteSettings(): Promise<SiteSettings> {
   const result = await query('SELECT key, value FROM site_settings');
