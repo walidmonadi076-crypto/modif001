@@ -26,9 +26,12 @@ const ProductPreviewPage: React.FC = () => {
             if (event.data?.type === 'preview-update') {
                 const payload = event.data.payload as Partial<Product>;
                 setProduct(prev => ({ ...prev, ...payload }));
-                // Update main image if gallery changes or if it's the first image
-                if (payload.gallery && payload.gallery.length > 0) {
-                     setMainImage(prevMain => payload.gallery?.includes(prevMain) ? prevMain : payload.gallery[0]);
+                
+                // FIX: Use Array.isArray to safely check for the gallery property.
+                // This resolves the TypeScript error by ensuring payload.gallery is an array
+                // before we try to access its elements.
+                if (Array.isArray(payload.gallery) && payload.gallery.length > 0) {
+                    setMainImage(prevMain => payload.gallery.includes(prevMain) ? prevMain : payload.gallery[0]);
                 } else if (payload.imageUrl) {
                     setMainImage(payload.imageUrl);
                 }
