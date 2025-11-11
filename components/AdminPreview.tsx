@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -59,7 +58,7 @@ const AdminPreview: React.FC<AdminPreviewProps> = ({ data, type }) => {
 
   useEffect(() => {
     const container = previewContainerRef.current;
-    if (device === 'desktop' || !container) {
+    if (!container) {
       return;
     }
 
@@ -126,23 +125,17 @@ const AdminPreview: React.FC<AdminPreviewProps> = ({ data, type }) => {
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
 
-  const isDesktop = device === 'desktop';
   const { width: deviceWidth, height: deviceHeight } = deviceDimensions[device];
   
-  const frameStyle: React.CSSProperties = isDesktop
-    ? {
-        width: '100%',
-        height: '100%',
-      }
-    : {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        width: `${deviceWidth}px`,
-        height: `${deviceHeight}px`,
-        transform: `translate(-50%, -50%) scale(${scale})`,
-        transformOrigin: 'center',
-      };
+  const frameStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: `${deviceWidth}px`,
+    height: `${deviceHeight}px`,
+    transform: `translate(-50%, -50%) scale(${scale})`,
+    transformOrigin: 'center',
+  };
 
   return (
     <div ref={previewRootRef} className="bg-gray-900 rounded-lg h-full flex flex-col p-4">
@@ -185,7 +178,6 @@ const AdminPreview: React.FC<AdminPreviewProps> = ({ data, type }) => {
               title={`${previewTarget} Preview`}
               className="w-full h-full"
               onLoad={() => setIframeLoaded(true)}
-              sandbox="allow-scripts allow-same-origin"
             />
           ) : type === 'social-links' ? (
             <div className="w-full h-full overflow-y-auto">
