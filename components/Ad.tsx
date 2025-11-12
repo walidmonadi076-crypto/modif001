@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAds } from '../contexts/AdContext';
 
 interface AdProps {
@@ -10,6 +10,7 @@ interface AdProps {
 const Ad: React.FC<AdProps> = ({ placement }) => {
   const { ads, isLoading } = useAds();
   const adContainerRef = useRef<HTMLDivElement>(null);
+  const [isIframe, setIsIframe] = useState(false);
   
   const ad = ads.find(a => a.placement === placement);
 
@@ -28,11 +29,18 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
         return { width: 300, height: 250, text: 'Ad Placeholder' };
     }
   };
-
+  
   const { width, height, text } = getAdDimensions();
+
+  useEffect(() => {
+    // Check if running in an iframe, but only on the client side to avoid SSR issues.
+    if (typeof window !== 'undefined' && window.self !== window.top) {
+      setIsIframe(true);
+    }
+  }, []);
   
   useEffect(() => {
-    if (ad?.code && adContainerRef.current) {
+    if (ad?.code && adContainerRef.current && !isIframe) {
       const container = adContainerRef.current;
       container.innerHTML = ''; // Clear previous ad content
 
@@ -67,7 +75,18 @@ const Ad: React.FC<AdProps> = ({ placement }) => {
         }
       });
     }
-  }, [ad]);
+  }, [ad, isIframe]);
+
+  if (isIframe) {
+    return (
+      <div 
+        style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100%' }} 
+        className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center"
+      >
+        <span className="text-gray-500 text-sm font-semibold text-center p-2">Ad disabled in preview</span>
+      </div>
+    );
+  }
 
   // Loading state placeholder
   if (isLoading) {

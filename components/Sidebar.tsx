@@ -55,6 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onMouseEnter, onMouseLeav
     { href: '/games', icon: ICONS.ACTION, label: 'Games' },
     { href: '/blog', icon: ICONS.BLOG, label: 'Blog' },
     { href: '/shop', icon: ICONS.STORE, label: 'Shop' },
+    { href: '/ai-chat', icon: ICONS.AI_CHAT, label: 'AI Chat' },
   ];
 
   const { popularLinks, parentPath } = useMemo(() => {
@@ -65,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onMouseEnter, onMouseLeav
     if (path.startsWith('/shop')) {
       return { popularLinks: POPULAR_SHOP_CATEGORIES, parentPath: '/shop' };
     }
-    // Default to games for both '/' and '/games'
+    // Default to games for '/', '/games', and '/ai-chat'
     return { popularLinks: POPULAR_GAME_CATEGORIES, parentPath: '/games' };
   }, [router.pathname]);
 

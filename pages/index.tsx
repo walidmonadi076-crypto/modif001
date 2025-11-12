@@ -27,8 +27,8 @@ const Home: React.FC<HomeProps> = ({ games, settings }) => {
 
   const sections = useMemo(() => {
     const priorityOrder = ['Play on Comet', 'New', 'Hot', 'Updated', 'Top', 'Featured'];
-    // FIX: Use reduce for robust type inference when flattening tags.
-    const allTags: string[] = [...new Set(games.reduce<string[]>((acc, g) => acc.concat(g.tags || []), []))];
+    // FIX: Use flatMap for a cleaner and more type-safe way to flatten tags.
+    const allTags: string[] = [...new Set(games.flatMap(g => g.tags || []))];
     const priorityTags = priorityOrder.filter(tag => allTags.includes(tag));
     const otherTags = allTags.filter(tag => !priorityOrder.includes(tag)).sort();
     const orderedTags = [...priorityTags, ...otherTags];

@@ -82,3 +82,8 @@ export interface SiteSettings {
   promo_button_url: string;
   recaptcha_site_key: string;
 }
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}

@@ -237,8 +237,8 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
     </>
   );
   
-  const FormContent = () => (
-    <div className="p-6 space-y-4 overflow-y-auto">
+  const formFields = (
+    <div className="p-6 space-y-4">
         {type === 'games' && renderGameFields()}
         {type === 'blogs' && renderBlogFields()}
         {type === 'products' && renderProductFields()}
@@ -260,13 +260,17 @@ export default function AdminForm({ item, type, onClose, onSubmit }: AdminFormPr
         <div className={`flex-grow grid ${canPreview ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-6 p-6 overflow-hidden`}>
             {canPreview ? (
                 <>
-                    <div className="overflow-y-auto pr-2"> <FormContent /> </div>
+                    <div className="overflow-y-auto pr-2">
+                        {formFields}
+                    </div>
                     <div className="hidden md:block h-full">
                         <AdminPreview data={formData} type={type as 'games' | 'blogs' | 'products'} />
                     </div>
                 </>
             ) : (
-                <div className="max-w-2xl mx-auto w-full"> <FormContent /> </div>
+                <div className="max-w-2xl mx-auto w-full overflow-y-auto">
+                    {formFields}
+                </div>
             )}
         </div>
       </form>
