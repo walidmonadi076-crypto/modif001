@@ -10,6 +10,9 @@ import type { ToastData, ToastType } from '../../components/Toast';
 import { useDebounce } from '../../hooks/useDebounce';
 import { markdownToHtml } from '../../lib/markdown';
 
+// Define a base URL for all API calls in this file.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -126,7 +129,7 @@ const AIToolsPanel: React.FC<{ addToast: (message: string, type: ToastType) => v
         setIsTextLoading(true);
         setTextResult('');
         try {
-            const res = await fetch('/api/admin/ai/generate-text', {
+            const res = await fetch(`${API_BASE}/api/admin/ai/generate-text`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
                 body: JSON.stringify({ prompt: textPrompt }),
@@ -152,7 +155,7 @@ const AIToolsPanel: React.FC<{ addToast: (message: string, type: ToastType) => v
         setIsImageLoading(true);
         setImageResult('');
         try {
-            const res = await fetch('/api/admin/ai/analyze-image', {
+            const res = await fetch(`${API_BASE}/api/admin/ai/analyze-image`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
                 body: JSON.stringify({ imageUrl, prompt: imagePrompt }),
@@ -270,7 +273,7 @@ export default function AdminPanel() {
   const fetchAnalyticsData = useCallback(async () => {
     setLoading(true);
     try {
-        const res = await fetch('/api/admin/analytics');
+        const res = await fetch(`${API_BASE}/api/admin/analytics`);
         if (!res.ok) throw new Error('Failed to fetch analytics');
         const data = await res.json();
         setAnalyticsData(data);
@@ -285,7 +288,7 @@ export default function AdminPanel() {
       if (['ads', 'settings', 'ai-tools', 'analytics'].includes(tab)) return;
       setLoading(true);
       try {
-        const url = `/api/admin/${tab}?page=${page}&search=${encodeURIComponent(search)}&limit=${pagination.itemsPerPage}&sortBy=${sortKey}&sortOrder=${sortDir}`;
+        const url = `${API_BASE}/api/admin/${tab}?page=${page}&search=${encodeURIComponent(search)}&limit=${pagination.itemsPerPage}&sortBy=${sortKey}&sortOrder=${sortDir}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch data');
         const data = await res.json();
@@ -302,9 +305,9 @@ export default function AdminPanel() {
   const fetchInitialAdminData = useCallback(async () => {
       try {
         const [statsRes, adsRes, settingsRes] = await Promise.all([
-          fetch('/api/admin/stats'),
-          fetch('/api/admin/ads'),
-          fetch('/api/admin/settings'),
+          fetch(`${API_BASE}/api/admin/stats`),
+          fetch(`${API_BASE}/api/admin/ads`),
+          fetch(`${API_BASE}/api/admin/settings`),
         ]);
 
         if (!statsRes.ok || !adsRes.ok || !settingsRes.ok) throw new Error('Failed to fetch initial admin data');
@@ -324,7 +327,7 @@ export default function AdminPanel() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch('/api/auth/check');
+        const res = await fetch(`${API_BASE}/api/auth/check`);
         const data = await res.json();
         setIsAuthenticated(data.authenticated);
       } catch (error) {
@@ -360,7 +363,7 @@ export default function AdminPanel() {
     e.preventDefault();
     setLoginError('');
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
@@ -391,7 +394,7 @@ export default function AdminPanel() {
     const csrfToken = getCookie('csrf_token');
     if (!csrfToken) return addToast('Erreur de session. Veuillez vous reconnecter.', 'error');
     try {
-      const res = await fetch(`/api/admin/${activeTab}?id=${id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken } });
+      const res = await fetch(`${API_BASE}/api/admin/${activeTab}?id=${id}`, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken } });
       if (res.ok) {
         addToast('Élément supprimé avec succès!', 'success');
         refreshCurrentTab();
@@ -408,7 +411,7 @@ export default function AdminPanel() {
     const csrfToken = getCookie('csrf_token');
     if (!csrfToken) return addToast('Erreur de session.', 'error');
     try {
-        const res = await fetch('/api/admin/comments', {
+        const res = await fetch(`${API_BASE}/api/admin/comments`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
             body: JSON.stringify({ id })
@@ -430,7 +433,7 @@ export default function AdminPanel() {
     if (!csrfToken) return addToast('Erreur de session. Veuillez vous reconnecter.', 'error');
     try {
       const method = editingItem ? 'PUT' : 'POST';
-      const res = await fetch(`/api/admin/${activeTab}`, {
+      const res = await fetch(`${API_BASE}/api/admin/${activeTab}`, {
         method,
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify(formData),
@@ -453,7 +456,7 @@ export default function AdminPanel() {
     const csrfToken = getCookie('csrf_token');
     if (!csrfToken) return addToast('Erreur de session.', 'error');
     try {
-      const res = await fetch('/api/admin/ads', {
+      const res = await fetch(`${API_BASE}/api/admin/ads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify(ads)
@@ -472,7 +475,7 @@ export default function AdminPanel() {
     const csrfToken = getCookie('csrf_token');
     if (!csrfToken) return addToast('Erreur de session.', 'error');
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(`${API_BASE}/api/admin/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify(settings)

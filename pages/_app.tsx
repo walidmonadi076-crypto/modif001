@@ -55,11 +55,14 @@ function MyApp({ Component, pageProps }: MyAppProps) {
 
   useEffect(() => {
     const fetchClientSideData = async () => {
+      // Define a base URL for API calls, falling back to a relative path.
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
       setIsLoadingSettings(true);
       setIsLoadingSocials(true);
 
       try {
-        const settingsRes = await fetch('/api/settings');
+        const settingsRes = await fetch(`${API_BASE}/api/settings`);
         if (settingsRes.ok) {
           const data = await settingsRes.json();
           setSettings(data);
@@ -74,7 +77,7 @@ function MyApp({ Component, pageProps }: MyAppProps) {
       
       if (!isAdminPage) {
         try {
-          const socialLinksRes = await fetch('/api/social-links');
+          const socialLinksRes = await fetch(`${API_BASE}/api/social-links`);
           if (socialLinksRes.ok) {
             const data = await socialLinksRes.json();
             if(Array.isArray(data)) {
