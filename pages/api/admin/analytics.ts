@@ -1,3 +1,4 @@
+
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getDbClient } from '../../../db';
 import { isAuthorized } from '../auth/check';
@@ -19,8 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Non autorisé' });
   }
 
-  const client = await getDbClient();
+  let client;
   try {
+    client = await getDbClient();
     const [gamesRes, blogsRes, productsRes] = await Promise.all([
       client.query(`
         SELECT title as name, slug, view_count 
@@ -57,6 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error("API Error in /api/admin/analytics:", error);
     res.status(500).json({ error: 'Erreur interne du serveur.', details: (error as Error).message });
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 }

@@ -56,7 +56,7 @@ function MyApp({ Component, pageProps }: MyAppProps) {
   useEffect(() => {
     const fetchClientSideData = async () => {
       // Define a base URL for API calls, falling back to a relative path.
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : '');
 
       setIsLoadingSettings(true);
       setIsLoadingSocials(true);

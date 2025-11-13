@@ -11,7 +11,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { markdownToHtml } from '../../lib/markdown';
 
 // Define a base URL for all API calls in this file.
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : '');
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
