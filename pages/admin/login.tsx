@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
@@ -274,7 +275,18 @@ export default function AdminPanel() {
     setLoading(true);
     try {
         const res = await fetch(`${API_BASE}/api/admin/analytics`);
-        if (!res.ok) throw new Error('Failed to fetch analytics');
+
+        // Gracefully handle 401 Unauthorized, which can happen before the initial auth check completes.
+        // This prevents unnecessary console errors.
+        if (res.status === 401) {
+          setAnalyticsData(null);
+          return;
+        }
+        
+        if (!res.ok) {
+            throw new Error('Failed to fetch analytics');
+        }
+
         const data = await res.json();
         setAnalyticsData(data);
     } catch (error) {
